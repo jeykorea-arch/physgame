@@ -5,8 +5,7 @@ import test from "node:test";
 import { decode } from "@msgpack/msgpack";
 
 const appRoot = new URL("../", import.meta.url);
-const projectRoot = new URL("../../", import.meta.url);
-const manifest = JSON.parse(await readFile(new URL("data/marker_manifest.json", projectRoot), "utf8"));
+const manifest = JSON.parse(await readFile(new URL("public/data/marker_manifest.json", appRoot), "utf8"));
 const metadata = JSON.parse(await readFile(new URL("public/assets/targets.metadata.json", appRoot), "utf8"));
 const targetBuffer = await readFile(new URL("public/assets/targets.mind", appRoot));
 
@@ -15,7 +14,7 @@ test("targetIndex 0~5와 여섯 마커 파일 순서·해시가 원본과 일치
   assert.deepEqual(manifest.markers.map((item) => item.targetIndex), [0, 1, 2, 3, 4, 5]);
   assert.deepEqual(metadata.sources.map((item) => item.file), manifest.markers.map((item) => item.file));
   for (const source of metadata.sources) {
-    const original = await readFile(new URL(`AR_학습게임_마커_6종/${source.file}`, projectRoot));
+    const original = await readFile(new URL(`marker-sources/${source.file}`, appRoot));
     assert.equal(createHash("sha256").update(original).digest("hex"), source.sha256);
     assert.deepEqual([source.width, source.height], [1254, 1254]);
   }

@@ -7,9 +7,8 @@ import { OfflineCompiler } from "mind-ar/src/image-target/offline-compiler.js";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const appDir = path.resolve(scriptDir, "..");
-const projectDir = path.resolve(appDir, "..");
-const markerDir = path.join(projectDir, "AR_학습게임_마커_6종");
-const manifestPath = path.join(projectDir, "data", "marker_manifest.json");
+const markerDir = path.join(appDir, "marker-sources");
+const manifestPath = path.join(appDir, "public", "data", "marker_manifest.json");
 const outputDir = path.join(appDir, "public", "assets");
 const outputPath = path.join(outputDir, "targets.mind");
 const metadataPath = path.join(outputDir, "targets.metadata.json");

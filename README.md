@@ -26,7 +26,7 @@ npm.cmd run dev:pages
 
 ## 검증 명령
 
-- `npm.cmd run compile:targets`: 원본 6개 마커의 순서와 해시를 검증하고 `targets.mind`를 다시 만듭니다.
+- `npm.cmd run compile:targets`: `marker-sources`의 원본 6개 마커 순서와 해시를 검증하고 `targets.mind`를 다시 만듭니다.
 - `npm.cmd test`: 정답·오답·재시도·안내·배점, 진행 복원, AR/비AR 일치, 마커 순서와 개인정보 규칙을 검사합니다.
 - `npm.cmd run build:pages`: GitHub Pages용 정적 사이트를 `pages-dist`에 만듭니다.
 - `npm.cmd run build`: 기존 Sites/Vinext 운영 빌드를 만듭니다.

@@ -9,7 +9,7 @@ import {
   scoreForCorrectAttempt,
 } from "../lib/quiz-engine.js";
 
-const bank = JSON.parse(await readFile(new URL("../../data/quiz_bank_v1.json", import.meta.url), "utf8"));
+const bank = JSON.parse(await readFile(new URL("../public/data/quiz_bank_v1.json", import.meta.url), "utf8"));
 const lesson = getLessonQuestions(bank, 1);
 
 const wrongFor = (question) => {
