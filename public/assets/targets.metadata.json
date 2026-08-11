@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "compiler": "mind-ar@1.2.5 OfflineCompiler",
+  "generated_at": "2026-08-11T09:46:03.306Z",
+  "target_count": 6,
+  "output_bytes": 4819846,
+  "sources": [
+    {
+      "targetIndex": 0,
+      "file": "01_power_plant.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "2e157f20a34ce20ee7e596c5dd775f2318e3490a8a56fe1806d77bf2f5af6d33"
+    },
+    {
+      "targetIndex": 1,
+      "file": "02_high_voltage_transmission.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "58c6ef796908c3d26f038b9faefa8d46b45b9e9cf69602fed0c64b1230740fc7"
+    },
+    {
+      "targetIndex": 2,
+      "file": "03_transformer.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "7b4d567fb41977d7b2645377d7950875ac81021871c4be0f80f288572c123579"
+    },
+    {
+      "targetIndex": 3,
+      "file": "04_diode_rectifier.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "de38b7fc6e4a34ad79bcee00dd835e99e0043eda983789454c76cefca3830378"
+    },
+    {
+      "targetIndex": 4,
+      "file": "05_capacitor_smoothing.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "3dabe84897b39ad09f807e1d797c56046667426edecb18804751a0cfb8ad8eb7"
+    },
+    {
+      "targetIndex": 5,
+      "file": "06_transistor_switching.png",
+      "width": 1254,
+      "height": 1254,
+      "sha256": "1627cb32a3f0a6056fb7f11785142526f473c60bd0b1def2e0b61f68c0f0fe45"
+    }
+  ]
+}

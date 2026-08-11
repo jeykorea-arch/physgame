@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "target_file": "targets.mind",
+  "compile_order_is_binding": true,
+  "markers": [
+    {"targetIndex": 0, "file": "01_power_plant.png", "stage": "발전소", "lesson": 1, "dimensions": [1254, 1254]},
+    {"targetIndex": 1, "file": "02_high_voltage_transmission.png", "stage": "고전압 송전", "lesson": 1, "dimensions": [1254, 1254]},
+    {"targetIndex": 2, "file": "03_transformer.png", "stage": "배전 변압기", "lesson": 1, "dimensions": [1254, 1254]},
+    {"targetIndex": 3, "file": "04_diode_rectifier.png", "stage": "다이오드 정류", "lesson": 2, "dimensions": [1254, 1254]},
+    {"targetIndex": 4, "file": "05_capacitor_smoothing.png", "stage": "축전기 평활", "lesson": 2, "dimensions": [1254, 1254]},
+    {"targetIndex": 5, "file": "06_transistor_switching.png", "stage": "트랜지스터 스위칭", "lesson": 2, "dimensions": [1254, 1254]}
+  ],
+  "usage_note": "AI 생성 이미지는 인식용 마커로만 사용하며 과학적 회로도의 정답 근거로 사용하지 않는다."
+}
+

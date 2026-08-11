@@ -1,0 +1,12 @@
+{
+  "name": "전기의 여정 — 1차시 알파",
+  "short_name": "전기의 여정",
+  "description": "발전소에서 변압기까지 배우는 물리학 II AR 학습 게임",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#08131d",
+  "theme_color": "#08131d",
+  "lang": "ko",
+  "orientation": "portrait-primary"
+}
