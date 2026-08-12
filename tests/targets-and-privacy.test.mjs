@@ -64,3 +64,29 @@ test("10초 안내와 20초 비AR 강조 타이머가 구현되어 있다", asyn
   assert.match(source, /setTimeout\(\(\) => setScanTip\(2\), 20000\)/);
   assert.match(source, /scanTip >= 2 \|\| cameraError/);
 });
+
+test("올바른 마커는 5초 AR 관찰 후에만 다음 화면으로 전환한다", async () => {
+  const source = await readFile(new URL("app/AlphaApp.tsx", appRoot), "utf8");
+  assert.match(source, /const AR_PREVIEW_SECONDS = 5/);
+  assert.match(source, /AR_PREVIEW_SECONDS \* 1000/);
+  assert.match(source, /target\.addEventListener\("targetLost", lost\)/);
+  assert.match(source, /마커를 화면 안에 유지하세요/);
+  assert.match(source, /params\.get\("qa"\) === "marker-found"/);
+  assert.doesNotMatch(source, /setCameraStatus\(`\$\{stages\[index\]\.marker\} 인식 완료`\);\s*return \{ \.\.\.current, phase: "observe" \}/);
+});
+
+test("현재 단계가 아닌 마커의 AR 물체는 보이지 않는다", async () => {
+  const source = await readFile(new URL("app/AlphaApp.tsx", appRoot), "utf8");
+  assert.match(source, /visible="\$\{activeIndex === 0\}"/);
+  assert.match(source, /visible="\$\{activeIndex === 1\}"/);
+  assert.match(source, /visible="\$\{activeIndex === 2\}"/);
+});
+
+test("작은 화면에서도 과학 그래픽 아래 수치가 캔버스 안에 배치된다", async () => {
+  const source = await readFile(new URL("app/AlphaApp.tsx", appRoot), "utf8");
+  const styles = await readFile(new URL("app/globals.css", appRoot), "utf8");
+  assert.match(source, /const labelBottom = height - 19/);
+  assert.match(source, /ctx\.fillText\(`V₂=\$\{secondaryVoltage\.toFixed\(0\)\} V~`, width \* 0\.62, labelBottom\)/);
+  assert.match(styles, /\.science-canvas \{[^}]*height: 270px/s);
+  assert.match(styles, /@media \(max-width: 370px\)[\s\S]*\.science-canvas \{ height: 260px; \}/);
+});

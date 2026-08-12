@@ -173,6 +173,8 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .ar-scene-host, .ar-scene-host a-scene { width: 100% !important; height: 100% !important; }
 .ar-scene-host video, .ar-scene-host canvas { max-width: 100%; }
 .scan-frame { position: absolute; inset: 16%; pointer-events: none; }
+.scan-frame.previewing i { border-color: var(--cyan); animation: previewGlow .9s ease-in-out infinite alternate; }
+@keyframes previewGlow { to { filter: drop-shadow(0 0 8px var(--cyan)); transform: scale(1.04); } }
 .scan-frame i { position: absolute; width: 42px; height: 42px; border-color: var(--yellow); border-style: solid; }
 .scan-frame i:nth-child(1) { left: 0; top: 0; border-width: 3px 0 0 3px; }
 .scan-frame i:nth-child(2) { right: 0; top: 0; border-width: 3px 3px 0 0; }
@@ -181,6 +183,10 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .marker-badge { position: absolute; left: 12px; bottom: 12px; display: flex; align-items: center; background: var(--night); border: 1px solid var(--line); }
 .marker-badge b { display: grid; place-items: center; width: 42px; height: 42px; background: var(--yellow); color: var(--night); }
 .marker-badge span { padding: 0 12px; font-size: 12px; font-weight: 800; }
+.ar-preview-card { position: absolute; z-index: 4; top: 12px; right: 12px; max-width: calc(100% - 24px); padding: 10px 12px; background: rgba(8, 19, 29, .88); border: 1px solid var(--cyan); color: var(--ink); text-align: right; backdrop-filter: blur(8px); }
+.ar-preview-card strong, .ar-preview-card span { display: block; }
+.ar-preview-card strong { color: var(--cyan); font-size: 13px; }
+.ar-preview-card span { margin-top: 3px; color: #d3dde1; font-size: 10px; }
 .scan-copy { padding: 24px 4px; }
 .scan-copy h1 { margin: 0; font-size: clamp(27px, 8vw, 40px); line-height: 1.12; letter-spacing: -.035em; }
 .status-line { min-height: 42px; margin: 14px 0; color: #c8d1d7; font-size: 13px; line-height: 1.5; }
@@ -201,7 +207,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 
 .panel { background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); }
 .diagram-panel { padding: 14px; }
-.science-canvas { display: block; width: 100%; height: 245px; background: #0a1721; border: 1px solid #223948; }
+.science-canvas { display: block; width: 100%; height: 270px; background: #0a1721; border: 1px solid #223948; }
 .diagram-panel > p { margin: 16px 4px 10px; color: #c9d1d7; font-size: 14px; line-height: 1.7; word-break: keep-all; }
 .simulation-label { display: inline-block; padding: 5px 8px; background: rgba(66, 211, 201, .09); color: var(--cyan); font-size: 9px; font-weight: 800; }
 .content-section > .primary-button { margin-top: 18px; }
@@ -307,7 +313,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
   .pair-fields { grid-template-columns: 1fr; }
   .sequence-list li { grid-template-columns: 26px minmax(0, 1fr) auto; font-size: 11px; }
   .icon-button { width: 34px; height: 34px; }
-  .science-canvas { height: 225px; }
+  .science-canvas { height: 260px; }
   .result-grid { grid-template-columns: 1fr; }
 }
 

@@ -15,6 +15,7 @@ import {
 
 const STORAGE_KEY = "physgame.lesson1.alpha.v1";
 const APP_VERSION = 1;
+const AR_PREVIEW_SECONDS = 5;
 
 function publicAsset(path: string) {
   const relativePath = path.replace(/^\/+/, "");
@@ -146,7 +147,7 @@ function describeCameraError(error: any) {
   return "카메라를 시작하지 못했습니다. 다른 앱의 카메라 사용을 종료한 뒤 다시 시도하거나 비AR 모드로 전환하세요.";
 }
 
-function ARScene({ activeIndex, retryKey, onFound, onStatus, onError }: any) {
+function ARScene({ activeIndex, retryKey, onFound, onLost, onStatus, onError }: any) {
   const hostRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -173,6 +174,11 @@ function ARScene({ activeIndex, retryKey, onFound, onStatus, onError }: any) {
           onStatus("QA 카메라 준비 완료 · 마커 인식 대기");
           return;
         }
+        if (params.get("qa") === "marker-found" && ["localhost", "127.0.0.1"].includes(window.location.hostname)) {
+          onStatus("QA 마커 인식 재현");
+          window.setTimeout(() => onFound(activeIndex), 120);
+          return;
+        }
         if (!navigator.mediaDevices?.getUserMedia) throw new DOMException("No camera", "NotFoundError");
 
         onStatus("카메라 권한 확인 중…");
@@ -187,16 +193,29 @@ function ARScene({ activeIndex, retryKey, onFound, onStatus, onError }: any) {
             vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
             <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
             <a-entity id="ar-target-0" mindar-image-target="targetIndex: 0">
-              <a-torus color="#ffd54a" radius="0.28" radius-tubular="0.035" rotation="90 0 0" animation="property: rotation; to: 90 0 360; loop: true; dur: 1800; easing: linear"></a-torus>
-              <a-cylinder color="#f5f0df" radius="0.05" height="0.62" rotation="0 0 90"></a-cylinder>
+              <a-entity visible="${activeIndex === 0}">
+                <a-torus color="#ffd54a" radius="0.28" radius-tubular="0.035" rotation="90 0 0" animation__spin="property: rotation; to: 90 0 360; loop: true; dur: 1800; easing: linear"></a-torus>
+                <a-torus color="#42d3c9" radius="0.16" radius-tubular="0.018" rotation="90 0 0" animation__pulse="property: scale; from: 0.82 0.82 0.82; to: 1.18 1.18 1.18; dir: alternate; loop: true; dur: 650"></a-torus>
+                <a-cylinder color="#f5f0df" radius="0.045" height="0.68" rotation="0 0 90"></a-cylinder>
+                <a-sphere color="#42d3c9" radius="0.035" position="-0.34 0 0.06" animation__flow="property: position; from: -0.34 0 0.06; to: 0.34 0 0.06; loop: true; dur: 1100; easing: linear"></a-sphere>
+              </a-entity>
             </a-entity>
             <a-entity id="ar-target-1" mindar-image-target="targetIndex: 1">
-              <a-box color="#42d3c9" width="0.82" height="0.035" depth="0.035"></a-box>
-              <a-sphere color="#ffd54a" radius="0.055" position="-0.35 0 0.05" animation="property: position; from: -0.35 0 0.05; to: 0.35 0 0.05; loop: true; dur: 1400; easing: linear"></a-sphere>
+              <a-entity visible="${activeIndex === 1}">
+                <a-box color="#42d3c9" width="0.86" height="0.035" depth="0.035"></a-box>
+                <a-box color="#42d3c9" width="0.86" height="0.025" depth="0.025" position="0 -0.14 0"></a-box>
+                <a-sphere color="#ffd54a" radius="0.05" position="-0.38 0 0.05" animation__flow1="property: position; from: -0.38 0 0.05; to: 0.38 0 0.05; loop: true; dur: 1400; easing: linear"></a-sphere>
+                <a-sphere color="#f5f0df" radius="0.035" position="-0.38 -0.14 0.05" animation__flow2="property: position; from: -0.38 -0.14 0.05; to: 0.38 -0.14 0.05; loop: true; dur: 1400; delay: 450; easing: linear"></a-sphere>
+                <a-sphere color="#ffd54a" radius="0.028" position="-0.38 0 0.05" animation__flow3="property: position; from: -0.38 0 0.05; to: 0.38 0 0.05; loop: true; dur: 1400; delay: 850; easing: linear"></a-sphere>
+              </a-entity>
             </a-entity>
             <a-entity id="ar-target-2" mindar-image-target="targetIndex: 2">
-              <a-torus color="#42d3c9" radius="0.22" radius-tubular="0.025" position="-0.23 0 0"></a-torus>
-              <a-torus color="#ffd54a" radius="0.14" radius-tubular="0.025" position="0.23 0 0"></a-torus>
+              <a-entity visible="${activeIndex === 2}">
+                <a-torus color="#42d3c9" radius="0.22" radius-tubular="0.025" position="-0.23 0 0" animation__wobble1="property: rotation; from: -14 -8 0; to: 14 8 0; dir: alternate; loop: true; dur: 720; easing: easeInOutSine"></a-torus>
+                <a-torus color="#ffd54a" radius="0.14" radius-tubular="0.025" position="0.23 0 0" animation__wobble2="property: rotation; from: 14 8 0; to: -14 -8 0; dir: alternate; loop: true; dur: 720; easing: easeInOutSine"></a-torus>
+                <a-torus color="#f5f0df" radius="0.31" radius-tubular="0.009" rotation="90 0 0" animation__flux="property: scale; from: 0.78 0.78 0.78; to: 1.16 1.16 1.16; dir: alternate; loop: true; dur: 900"></a-torus>
+                <a-sphere color="#42d3c9" radius="0.035" position="-0.1 0 0.06" animation__transfer="property: position; from: -0.1 0 0.06; to: 0.12 0 0.06; dir: alternate; loop: true; dur: 620; easing: easeInOutSine"></a-sphere>
+              </a-entity>
             </a-entity>
           </a-scene>`;
 
@@ -210,8 +229,11 @@ function ARScene({ activeIndex, retryKey, onFound, onStatus, onError }: any) {
         for (let index = 0; index < 3; index += 1) {
           const target = host.querySelector(`#ar-target-${index}`)!;
           const found = (() => onFound(index)) as EventListener;
+          const lost = (() => onLost(index)) as EventListener;
           target.addEventListener("targetFound", found);
+          target.addEventListener("targetLost", lost);
           listeners.push([target, "targetFound", found]);
+          listeners.push([target, "targetLost", lost]);
         }
 
         system = scene.systems?.["mindar-image-system"];
@@ -235,7 +257,7 @@ function ARScene({ activeIndex, retryKey, onFound, onStatus, onError }: any) {
       }
       if (host) host.innerHTML = "";
     };
-  }, [activeIndex, retryKey, onError, onFound, onStatus]);
+  }, [activeIndex, retryKey, onError, onFound, onLost, onStatus]);
 
   return <div className="ar-scene-host" ref={hostRef} aria-label="MindAR 카메라 화면" />;
 }
@@ -328,43 +350,49 @@ function ScienceCanvas({ stageIndex, value, reducedMotion }: any) {
         const currentHeight = Math.min(85, current * 8);
         const lossHeight = Math.min(85, loss * 0.8);
         ctx.fillStyle = cyan;
-        ctx.fillRect(width * 0.28 - 22, 188 - currentHeight, 44, currentHeight);
+        const chartBase = height - 66;
+        ctx.fillRect(width * 0.28 - 22, chartBase - currentHeight, 44, currentHeight);
         ctx.fillStyle = yellow;
-        ctx.fillRect(width * 0.7 - 22, 188 - lossHeight, 44, lossHeight);
+        ctx.fillRect(width * 0.7 - 22, chartBase - lossHeight, 44, lossHeight);
         ctx.fillStyle = ink;
-        ctx.fillText(`I = ${current.toFixed(1)} A`, width * 0.18, 211);
-        ctx.fillText(`손실 = ${loss.toFixed(1)} W`, width * 0.55, 211);
+        ctx.fillText(`I = ${current.toFixed(1)} A`, width * 0.16, height - 41);
+        ctx.fillText(`손실 = ${loss.toFixed(1)} W`, width * 0.52, height - 41);
         ctx.fillStyle = muted;
         ctx.font = "600 12px system-ui, sans-serif";
-        ctx.fillText("P=VI", width * 0.26, 232);
-        ctx.fillText("P손실=I²R", width * 0.64, 232);
+        ctx.fillText("P=VI", width * 0.24, height - 17);
+        ctx.fillText("P손실=I²R", width * 0.61, height - 17);
       } else {
         const secondaryVoltage = (2200 * value) / 1000;
+        const labelTop = height - 48;
+        const labelBottom = height - 19;
+        const coreTop = 28;
+        const coreBottom = labelTop - 22;
+        const coreHeight = Math.max(105, coreBottom - coreTop);
         ctx.strokeStyle = ink;
         ctx.lineWidth = 6;
-        ctx.strokeRect(width * 0.37, 38, width * 0.26, 130);
+        ctx.strokeRect(width * 0.37, coreTop, width * 0.26, coreHeight);
         ctx.strokeStyle = cyan;
         ctx.lineWidth = 3;
         for (let i = 0; i < 8; i += 1) {
           ctx.beginPath();
-          ctx.arc(width * 0.32, 65 + i * 12, 18, -Math.PI / 2, Math.PI / 2);
+          ctx.arc(width * 0.32, coreTop + 26 + i * ((coreHeight - 52) / 7), 18, -Math.PI / 2, Math.PI / 2);
           ctx.stroke();
         }
         ctx.strokeStyle = yellow;
         const turnsShown = Math.max(2, Math.round(value / 70));
         for (let i = 0; i < turnsShown; i += 1) {
           ctx.beginPath();
-          ctx.arc(width * 0.68, 65 + i * (84 / Math.max(1, turnsShown - 1)), 18, Math.PI / 2, -Math.PI / 2);
+          ctx.arc(width * 0.68, coreTop + 26 + i * ((coreHeight - 52) / Math.max(1, turnsShown - 1)), 18, Math.PI / 2, -Math.PI / 2);
           ctx.stroke();
         }
-        arrow(width * 0.43, 102, width * 0.57, 102, cyan);
+        arrow(width * 0.43, coreTop + coreHeight / 2, width * 0.57, coreTop + coreHeight / 2, cyan);
         ctx.fillStyle = ink;
-        ctx.fillText("N₁=1,000회", width * 0.08, 205);
-        ctx.fillText(`N₂=${value}회`, width * 0.65, 205);
+        ctx.fillText("N₁=1,000회", width * 0.08, labelTop);
+        ctx.fillText(`N₂=${value}회`, width * 0.65, labelTop);
         ctx.fillStyle = cyan;
-        ctx.fillText("V₁=2,200 V~", width * 0.06, 229);
+        ctx.fillText("V₁=2,200 V~", width * 0.06, labelBottom);
         ctx.fillStyle = yellow;
-        ctx.fillText(`V₂=${secondaryVoltage.toFixed(0)} V~`, width * 0.62, 229);
+        ctx.fillText(`V₂=${secondaryVoltage.toFixed(0)} V~`, width * 0.62, labelBottom);
       }
     };
     draw();
@@ -597,12 +625,35 @@ export function AlphaApp() {
   const [retryKey, setRetryKey] = useState(0);
   const [scanTip, setScanTip] = useState(0);
   const [wrongMarker, setWrongMarker] = useState("");
+  const [arPreviewIndex, setArPreviewIndex] = useState<number | null>(null);
+  const [arPreviewSeconds, setArPreviewSeconds] = useState(AR_PREVIEW_SECONDS);
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
 
   useEffect(() => {
-    const isQaRun = new URLSearchParams(window.location.search).has("qa");
+    const params = new URLSearchParams(window.location.search);
+    const qa = params.get("qa");
+    const isLocalQa = Boolean(qa) && ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const isQaRun = Boolean(qa);
     setQaMode(isQaRun);
-    setProgress(isQaRun ? initialProgress : mergeStoredProgress(localStorage.getItem(STORAGE_KEY)));
+    if (isLocalQa && (qa === "stage-2-manipulate" || qa === "stage-3-manipulate")) {
+      const stageIndex = qa === "stage-2-manipulate" ? 1 : 2;
+      setProgress({
+        ...initialProgress,
+        started: true,
+        mode: "fallback",
+        stageIndex,
+        phase: "manipulate",
+        questionIndex: stageIndex === 1 ? 2 : 6,
+        predictions: { [stageIndex]: stages[stageIndex].predictionAnswer },
+        startedAt: Date.now(),
+      });
+      setShowHome(false);
+    } else if (isLocalQa && qa === "marker-found") {
+      setProgress({ ...initialProgress, started: true, mode: "ar", phase: "scan", startedAt: Date.now() });
+      setShowHome(false);
+    } else {
+      setProgress(isQaRun ? initialProgress : mergeStoredProgress(localStorage.getItem(STORAGE_KEY)));
+    }
     setHydrated(true);
     fetch(publicAsset("data/quiz_bank_v1.json"))
       .then((response) => {
@@ -627,7 +678,7 @@ export function AlphaApp() {
   }, [progress.startedAt]);
 
   useEffect(() => {
-    if (!progress.started || progress.completed || showHome || progress.mode !== "ar" || progress.phase !== "scan") {
+    if (!progress.started || progress.completed || showHome || progress.mode !== "ar" || progress.phase !== "scan" || arPreviewIndex !== null) {
       setScanTip(0);
       return;
     }
@@ -638,7 +689,28 @@ export function AlphaApp() {
       window.clearTimeout(ten);
       window.clearTimeout(twenty);
     };
-  }, [progress.completed, progress.mode, progress.phase, progress.stageIndex, progress.started, retryKey, showHome]);
+  }, [arPreviewIndex, progress.completed, progress.mode, progress.phase, progress.stageIndex, progress.started, retryKey, showHome]);
+
+  useEffect(() => {
+    if (arPreviewIndex === null) {
+      setArPreviewSeconds(AR_PREVIEW_SECONDS);
+      return;
+    }
+    setArPreviewSeconds(AR_PREVIEW_SECONDS);
+    const ticker = window.setInterval(() => setArPreviewSeconds((seconds) => Math.max(0, seconds - 1)), 1000);
+    const finish = window.setTimeout(() => {
+      setProgress((current: any) => {
+        if (current.mode !== "ar" || current.phase !== "scan" || current.stageIndex !== arPreviewIndex) return current;
+        return { ...current, phase: "observe" };
+      });
+      setArPreviewIndex(null);
+      setCameraStatus("");
+    }, AR_PREVIEW_SECONDS * 1000);
+    return () => {
+      window.clearInterval(ticker);
+      window.clearTimeout(finish);
+    };
+  }, [arPreviewIndex]);
 
   const lessonQuestions = useMemo(() => (bank ? getLessonQuestions(bank, 1) : []), [bank]);
   const stage = stages[progress.stageIndex] ?? stages[0];
@@ -660,6 +732,7 @@ export function AlphaApp() {
     });
     setCameraError("");
     setCameraStatus("");
+    setArPreviewIndex(null);
     setShowHome(false);
   };
 
@@ -677,6 +750,7 @@ export function AlphaApp() {
   };
 
   const switchToFallback = () => {
+    setArPreviewIndex(null);
     mutate({ mode: "fallback", phase: progress.phase === "scan" ? "observe" : progress.phase });
     setCameraError("");
     setCameraStatus("비AR 모드: 문항·정답·피드백은 AR과 같습니다.");
@@ -689,8 +763,21 @@ export function AlphaApp() {
         return current;
       }
       setWrongMarker("");
-      setCameraStatus(`${stages[index].marker} 인식 완료`);
-      return { ...current, phase: "observe" };
+      setCameraStatus(`${stages[index].marker} AR 작동을 관찰하세요.`);
+      setArPreviewIndex((previewing) => previewing ?? index);
+      return current;
+    });
+  }, []);
+
+  const handleLost = useCallback((index: number) => {
+    setProgress((current: any) => {
+      if (index !== current.stageIndex) {
+        setWrongMarker("");
+        return current;
+      }
+      setArPreviewIndex((previewing) => previewing === index ? null : previewing);
+      setCameraStatus("마커가 화면을 벗어났습니다. 5초 동안 화면 안에 유지해 주세요.");
+      return current;
     });
   }, []);
 
@@ -747,6 +834,7 @@ export function AlphaApp() {
   const nextStage = () => {
     const nextStageIndex = progress.stageIndex + 1;
     mutate({ stageIndex: nextStageIndex, phase: progress.mode === "ar" ? "scan" : "observe" });
+    setArPreviewIndex(null);
     setCameraError("");
     setCameraStatus("");
     setRetryKey((key) => key + 1);
@@ -854,15 +942,16 @@ export function AlphaApp() {
       {progress.phase === "scan" && progress.mode === "ar" && (
         <section className="scan-section">
           <div className="scan-viewport">
-            {!cameraError && <ARScene activeIndex={progress.stageIndex} retryKey={retryKey} onFound={handleFound} onStatus={handleCameraStatus} onError={handleCameraError} />}
-            <div className="scan-frame" aria-hidden="true"><i /><i /><i /><i /></div>
+            {!cameraError && <ARScene activeIndex={progress.stageIndex} retryKey={retryKey} onFound={handleFound} onLost={handleLost} onStatus={handleCameraStatus} onError={handleCameraError} />}
+            <div className={`scan-frame ${arPreviewIndex !== null ? "previewing" : ""}`} aria-hidden="true"><i /><i /><i /><i /></div>
+            {arPreviewIndex !== null && <div className="ar-preview-card" role="status"><strong>AR 관찰 중 · {arPreviewSeconds}초</strong><span>마커를 화면 안에 유지하세요</span></div>}
             <div className="marker-badge"><b>{stage.number}</b><span>{stage.marker}</span></div>
           </div>
           <div className="scan-copy">
             <p className="eyebrow">마커 인식</p>
             <h1>{stage.marker} 카드를<br />화면 안에 맞추세요</h1>
             <p className="status-line" role="status">{cameraError || wrongMarker || cameraStatus || "카메라를 준비하고 있습니다…"}</p>
-            {scanTip >= 1 && !cameraError && <div className="scan-tip"><strong>인식이 늦어지고 있어요</strong><span>카드를 평평하게 · 빛 반사 피하기 · 30~50 cm 거리 유지</span></div>}
+            {scanTip >= 1 && !cameraError && arPreviewIndex === null && <div className="scan-tip"><strong>인식이 늦어지고 있어요</strong><span>카드를 평평하게 · 빛 반사 피하기 · 30~50 cm 거리 유지</span></div>}
             {cameraError && <button className="secondary-button" onClick={() => { setCameraError(""); setRetryKey((key) => key + 1); }}>카메라 다시 시도</button>}
             <button className={`fallback-button ${scanTip >= 2 || cameraError ? "emphasis" : ""}`} onClick={switchToFallback}>비AR로 같은 미션 계속하기</button>
             <small className="privacy-inline">카메라 영상·사진 비저장 / 비전송</small>
