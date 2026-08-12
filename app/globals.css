@@ -342,6 +342,17 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .message-presets { display: flex; flex-wrap: wrap; gap: 7px; }
 .message-presets button { min-height: 38px; padding: 7px 10px; border-color: var(--line); color: var(--ink); font-size: 10px; }
 .broadcast-card small { display: block; margin-top: 12px; color: var(--muted); }
+.flow-card, .misconception-card { grid-column: span 6; }
+.teacher-flow, .misconception-order { list-style: none; display: grid; gap: 8px; margin: 0; padding: 0; }
+.teacher-flow li { display: grid; grid-template-columns: 74px 1fr; gap: 12px; padding: 12px; background: #0a1822; }
+.teacher-flow b { color: var(--yellow); font-size: 12px; }
+.teacher-flow span { color: #d5dde1; font-size: 12px; line-height: 1.5; }
+.priority-note { margin: -8px 0 14px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.misconception-order li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; padding: 11px; background: #0a1822; }
+.misconception-order li > span { width: 30px; height: 30px; display: grid; place-items: center; background: var(--yellow); color: var(--night); font-weight: 950; }
+.misconception-order b { color: var(--ink); font-size: 12px; line-height: 1.5; }
+.misconception-order p { margin: 5px 0; color: #bdc9cf; font-size: 11px; line-height: 1.55; }
+.misconception-order small { color: var(--cyan); font-size: 10px; }
 .analytics-card { grid-column: 1 / -1; }
 .file-button { display: inline-grid; place-items: center; background: var(--cyan); color: var(--night); }
 .file-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }
@@ -380,7 +391,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
   .teacher-alert, .lesson-tabs, .teacher-grid { margin-left: 12px; margin-right: 12px; }
   .teacher-alert { display: grid; }
   .teacher-grid { grid-template-columns: 1fr; }
-  .teacher-card, .qr-card, .timer-card, .roster-card, .broadcast-card, .analytics-card { grid-column: 1; }
+  .teacher-card, .qr-card, .timer-card, .roster-card, .broadcast-card, .flow-card, .misconception-card, .analytics-card { grid-column: 1; }
   .teacher-timer { font-size: clamp(62px, 22vw, 100px); }
   .timer-phases { grid-template-columns: repeat(2, 1fr); }
   .analytics-list { grid-template-columns: 1fr; }

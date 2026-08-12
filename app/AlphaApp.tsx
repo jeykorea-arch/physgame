@@ -998,7 +998,7 @@ export function AlphaApp() {
   }
 
   if (showTeacher) {
-    return <TeacherDashboard onExit={() => { setShowTeacher(false); history.replaceState(null, "", new URL(document.baseURI).pathname); }} />;
+    return <TeacherDashboard bank={bank} onExit={() => { setShowTeacher(false); history.replaceState(null, "", new URL(document.baseURI).pathname); }} />;
   }
 
   if (showHome || !progress.started) {

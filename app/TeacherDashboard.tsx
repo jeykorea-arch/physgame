@@ -23,7 +23,7 @@ function download(filename: string, data: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-export function TeacherDashboard({ onExit }: { onExit: () => void }) {
+export function TeacherDashboard({ bank, onExit }: { bank: { questions: Array<{ lesson: number; id: string; misconception?: string; feedback_correct?: string }> }; onExit: () => void }) {
   const [lesson, setLesson] = useState(1);
   const [secondsLeft, setSecondsLeft] = useState(45 * 60);
   const [running, setRunning] = useState(false);
@@ -52,6 +52,7 @@ export function TeacherDashboard({ onExit }: { onExit: () => void }) {
   }, [running, secondsLeft]);
 
   const lessonResults = results.filter((result) => result.lesson === lesson);
+  const lessonQuestions = bank.questions.filter((question) => question.lesson === lesson);
   const aggregates = useMemo(() => {
     const map = new Map<string, { total: number; wrong: number; completed: number }>();
     lessonResults.forEach((result) => {
@@ -69,6 +70,15 @@ export function TeacherDashboard({ onExit }: { onExit: () => void }) {
       ...value,
     })).sort((a, b) => b.wrong - a.wrong || a.id.localeCompare(b.id));
   }, [lessonResults]);
+  const explanationOrder = useMemo(() => {
+    if (aggregates.length) {
+      return aggregates.filter((item) => item.wrong > 0).slice(0, 3).map((item) => {
+        const question = lessonQuestions.find((candidate) => candidate.id === item.id);
+        return { id: item.id, title: question?.misconception ?? "오개념 설명", explanation: question?.feedback_correct ?? "정답 피드백을 다시 설명하세요.", wrong: item.wrong, total: item.total };
+      });
+    }
+    return config.teacherTopics.slice(0, 3).map((topic: string, index: number) => ({ id: `${index + 1}`, title: topic, explanation: "결과 파일을 불러오기 전 권장 설명 순서입니다.", wrong: 0, total: 0 }));
+  }, [aggregates, config.teacherTopics, lessonQuestions]);
 
   const importResults = async (files: FileList | null) => {
     if (!files?.length) return;
@@ -98,7 +108,7 @@ export function TeacherDashboard({ onExit }: { onExit: () => void }) {
 
       <section className="teacher-alert" role="note">
         <strong>로컬 집계 모드</strong>
-        <span>GitHub Pages에는 학생 기기 상태를 자동 수집하는 서버가 없습니다. 아래 수치는 교사가 직접 조정하며, 문항 통계는 학생이 내려받은 익명 결과 JSON을 가져와 계산합니다.</span>
+        <span>학생 데이터는 각 학생 기기에만 남습니다. 아래 수치는 교사가 직접 조정하며, 문항 통계는 학생이 내려받아 전달한 익명 결과 JSON을 이 화면에서만 읽어 계산합니다.</span>
       </section>
 
       <nav className="lesson-tabs" aria-label="차시 선택">
@@ -132,6 +142,26 @@ export function TeacherDashboard({ onExit }: { onExit: () => void }) {
           <h2>{message}</h2>
           <div className="message-presets">{["다음 스테이지로 이동하세요.", "힌트를 확인하고 다시 시도하세요.", "인식이 어렵다면 비AR로 전환하세요."].map((text) => <button key={text} onClick={() => setMessage(text)}>{text}</button>)}</div>
           <small>학생 기기를 원격 제어하지 않습니다. 교실 화면에 보여 줄 안내 문구입니다.</small>
+        </article>
+
+        <article className="teacher-card flow-card">
+          <p className="eyebrow">LESSON FLOW</p>
+          <h2>{lesson}차시 진행 안내</h2>
+          <ol className="teacher-flow">
+            <li><b>0–3분</b><span>QR 접속·안전 안내·카메라 권한 확인</span></li>
+            <li><b>3–28분</b><span>{config.stages.map((stage) => stage.name).join(" → ")}</span></li>
+            <li><b>28–40분</b><span>아래 오개념 설명 순서에 따라 전체 피드백</span></li>
+            <li><b>40–45분</b><span>핵심 산출 확인·익명 결과 파일 저장</span></li>
+          </ol>
+        </article>
+
+        <article className="teacher-card misconception-card">
+          <p className="eyebrow">TEACHING PRIORITY</p>
+          <h2>오개념 설명 순서</h2>
+          <p className="priority-note">{aggregates.length ? "가져온 익명 결과에서 오류가 많은 문항 순입니다." : "결과 파일을 불러오기 전에는 차시 기본 권장 순서를 표시합니다."}</p>
+          <ol className="misconception-order">
+            {explanationOrder.map((item, index) => <li key={item.id}><span>{index + 1}</span><div><b>{item.id.includes("Q") ? `${item.id} · ` : ""}{item.title}</b><p>{item.explanation}</p>{item.total > 0 && <small>오류 {item.wrong}/{item.total}</small>}</div></li>)}
+          </ol>
         </article>
 
         <article className="teacher-card analytics-card">

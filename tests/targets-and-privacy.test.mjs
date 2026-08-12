@@ -90,6 +90,8 @@ test("교사용 화면과 학생 결과는 실명·학번·서버 전송 없이 
   const teacherSource = await readFile(new URL("app/TeacherDashboard.tsx", appRoot), "utf8");
   assert.match(studentSource, /physgame-anonymous-result-v1/);
   assert.match(teacherSource, /로컬 집계 모드/);
+  assert.match(teacherSource, /학생 데이터는 각 학생 기기에만 남습니다/);
+  assert.match(teacherSource, /오개념 설명 순서/);
   assert.match(teacherSource, /application\/json/);
   assert.doesNotMatch(teacherSource, /fetch\(|XMLHttpRequest|WebSocket|sendBeacon|studentName|studentId/);
 });
