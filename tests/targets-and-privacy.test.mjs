@@ -80,6 +80,18 @@ test("현재 단계가 아닌 마커의 AR 물체는 보이지 않는다", async
   assert.match(source, /visible="\$\{activeIndex === 0\}"/);
   assert.match(source, /visible="\$\{activeIndex === 1\}"/);
   assert.match(source, /visible="\$\{activeIndex === 2\}"/);
+  assert.match(source, /visible="\$\{activeIndex === 3\}"/);
+  assert.match(source, /visible="\$\{activeIndex === 4\}"/);
+  assert.match(source, /visible="\$\{activeIndex === 5\}"/);
+});
+
+test("교사용 화면과 학생 결과는 실명·학번·서버 전송 없이 익명 집계한다", async () => {
+  const studentSource = await readFile(new URL("app/AlphaApp.tsx", appRoot), "utf8");
+  const teacherSource = await readFile(new URL("app/TeacherDashboard.tsx", appRoot), "utf8");
+  assert.match(studentSource, /physgame-anonymous-result-v1/);
+  assert.match(teacherSource, /로컬 집계 모드/);
+  assert.match(teacherSource, /application\/json/);
+  assert.doesNotMatch(teacherSource, /fetch\(|XMLHttpRequest|WebSocket|sendBeacon|studentName|studentId/);
 });
 
 test("작은 화면에서도 과학 그래픽 아래 수치가 캔버스 안에 배치된다", async () => {
