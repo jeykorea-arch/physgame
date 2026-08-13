@@ -1,0 +1,26 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "classes": {
+      "$classCode": {
+        ".write": "auth != null && ((!data.exists() && newData.child('ownerUid').val() === auth.uid) || data.child('ownerUid').val() === auth.uid)",
+        "ownerUid": {
+          ".validate": "newData.isString() && newData.val() === auth.uid"
+        },
+        "public": {
+          ".read": "auth != null",
+          ".validate": "newData.hasChildren(['lesson','active','createdAt']) && newData.child('lesson').isNumber() && newData.child('lesson').val() >= 1 && newData.child('lesson').val() <= 3 && newData.child('active').isBoolean() && newData.child('createdAt').isNumber()"
+        },
+        "students": {
+          ".read": "auth != null && root.child('classes').child($classCode).child('ownerUid').val() === auth.uid",
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid && (root.child('classes').child($classCode).child('public').child('active').val() === true || newData.child('connected').val() === false)",
+            ".validate": "newData.hasChildren(['alias','connected','lesson','stageIndex','phase','questionIndex','completedCount','score','mode','lastSeen']) && newData.child('alias').isString() && newData.child('alias').val().length <= 20 && newData.child('connected').isBoolean() && newData.child('lesson').isNumber() && newData.child('lesson').val() >= 1 && newData.child('lesson').val() <= 3 && newData.child('stageIndex').isNumber() && newData.child('stageIndex').val() >= 0 && newData.child('stageIndex').val() <= 3 && newData.child('phase').isString() && newData.child('phase').val().length <= 24 && newData.child('questionIndex').isNumber() && newData.child('questionIndex').val() >= -1 && newData.child('questionIndex').val() <= 10 && newData.child('completedCount').isNumber() && newData.child('completedCount').val() >= 0 && newData.child('completedCount').val() <= 10 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= 100 && newData.child('mode').isString() && (newData.child('mode').val() === 'ar' || newData.child('mode').val() === 'non-ar') && newData.child('lastSeen').isNumber()"
+          }
+        }
+      }
+    }
+  }
+}

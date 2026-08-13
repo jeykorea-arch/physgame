@@ -303,6 +303,12 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .lesson-picker b { margin-bottom: 4px; color: var(--cyan); font-size: 12px; }
 .lesson-picker span { overflow: hidden; font-size: 9px; line-height: 1.35; text-overflow: ellipsis; }
 .teacher-entry { width: 100%; min-height: 48px; margin-top: 14px; background: transparent; border: 1px solid var(--cyan); color: var(--cyan); font-weight: 900; cursor: pointer; }
+.student-live-notice { max-width: 760px; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center; margin: 10px auto; padding: 9px 12px; background: #0a1822; border: 1px solid var(--line); color: var(--muted); }
+.student-live-notice > span { grid-row: span 2; color: var(--yellow); }
+.student-live-notice.connected > span { color: #67e8a4; }
+.student-live-notice b { color: var(--ink); font-size: 11px; }
+.student-live-notice small { overflow-wrap: anywhere; font-size: 9px; line-height: 1.4; }
+.start-panel > .student-live-notice { margin-top: 0; }
 
 .teacher-shell { min-height: 100svh; padding-bottom: 50px; background: var(--night); color: var(--ink); }
 .teacher-header { position: sticky; z-index: 20; top: 0; min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 10px clamp(14px, 4vw, 38px); background: rgba(5, 15, 22, .96); border-bottom: 1px solid var(--line); }
@@ -337,11 +343,23 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .counter-row { display: grid; grid-template-columns: 1fr 42px 52px 42px; align-items: center; gap: 6px; padding: 8px 0; border-top: 1px solid var(--line); }
 .counter-row button { width: 42px; height: 42px; background: #0a1822; border: 1px solid #385063; color: var(--ink); font-size: 22px; cursor: pointer; }
 .counter-row strong { color: var(--yellow); font-size: 24px; text-align: center; font-variant-numeric: tabular-nums; }
+.counter-row.live { grid-template-columns: 1fr 70px; }
+.counter-row.live strong { text-align: right; }
+.live-status-copy { margin: 12px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .broadcast-card { grid-column: span 7; }
 .broadcast-card h2 { min-height: 72px; padding: 14px; background: var(--yellow); color: var(--night); font-size: clamp(20px, 3vw, 31px); }
 .message-presets { display: flex; flex-wrap: wrap; gap: 7px; }
 .message-presets button { min-height: 38px; padding: 7px 10px; border-color: var(--line); color: var(--ink); font-size: 10px; }
 .broadcast-card small { display: block; margin-top: 12px; color: var(--muted); }
+.live-students-card { grid-column: 1 / -1; }
+.live-empty { margin: 0; padding: 18px; background: #0a1822; color: var(--muted); font-size: 12px; }
+.live-student-table { display: grid; gap: 4px; overflow-x: auto; }
+.live-student-row { min-width: 650px; display: grid; grid-template-columns: 145px minmax(190px, 1fr) 70px 60px 65px; align-items: center; gap: 10px; padding: 10px 12px; background: #0a1822; font-size: 11px; }
+.live-student-row.header { color: var(--muted); font-size: 9px; font-weight: 900; }
+.live-student-row b { color: var(--cyan); }
+.live-student-row strong { color: var(--yellow); font-size: 16px; }
+.live-student-row em { color: #cbd5db; font-size: 10px; font-style: normal; }
+.live-student-row.offline { opacity: .45; }
 .flow-card, .misconception-card { grid-column: span 6; }
 .teacher-flow, .misconception-order { list-style: none; display: grid; gap: 8px; margin: 0; padding: 0; }
 .teacher-flow li { display: grid; grid-template-columns: 74px 1fr; gap: 12px; padding: 12px; background: #0a1822; }
@@ -391,7 +409,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
   .teacher-alert, .lesson-tabs, .teacher-grid { margin-left: 12px; margin-right: 12px; }
   .teacher-alert { display: grid; }
   .teacher-grid { grid-template-columns: 1fr; }
-  .teacher-card, .qr-card, .timer-card, .roster-card, .broadcast-card, .flow-card, .misconception-card, .analytics-card { grid-column: 1; }
+  .teacher-card, .qr-card, .timer-card, .roster-card, .broadcast-card, .live-students-card, .flow-card, .misconception-card, .analytics-card { grid-column: 1; }
   .teacher-timer { font-size: clamp(62px, 22vw, 100px); }
   .timer-phases { grid-template-columns: repeat(2, 1fr); }
   .analytics-list { grid-template-columns: 1fr; }

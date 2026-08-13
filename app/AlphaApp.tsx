@@ -13,6 +13,7 @@ import {
   shuffledSequence,
 } from "../lib/quiz-engine.js";
 import { getDefaultSliders, getLessonConfig, LESSONS } from "../lib/lesson-config.js";
+import { joinStudentClass, liveClassConfigured, type StudentClassHandle, type StudentLiveState } from "./firebase-live";
 import { TeacherDashboard } from "./TeacherDashboard";
 
 const STORAGE_KEY = "physgame.lesson1.alpha.v1";
@@ -76,6 +77,24 @@ function mergeStoredProgress(raw: string | null, lesson = 1) {
   } catch {
     return defaults;
   }
+}
+
+function toStudentLiveState(progress: any, showHome: boolean): StudentLiveState {
+  return {
+    lesson: Number(progress.lesson ?? 1),
+    stageIndex: Math.max(0, Math.min(2, Number(progress.stageIndex ?? 0))),
+    phase: !progress.started ? "waiting" : progress.completed ? "complete" : showHome ? "paused" : String(progress.phase ?? "waiting").slice(0, 24),
+    questionIndex: progress.started ? Math.max(0, Math.min(9, Number(progress.questionIndex ?? 0))) : -1,
+    completedCount: Object.values(progress.records ?? {}).filter((record: any) => record?.completed).length,
+    score: Math.max(0, Math.min(100, Number(progress.score ?? 0))),
+    mode: progress.mode === "ar" ? "ar" : "non-ar",
+  };
+}
+
+function LiveClassNotice({ classCode, status }: { classCode: string; status: string }) {
+  if (!classCode) return null;
+  const connected = status.startsWith("연결됨");
+  return <div className={`student-live-notice ${connected ? "connected" : ""}`} role="status"><span>{connected ? "●" : "○"}</span><b>실시간 수업 {classCode}</b><small>{status}</small></div>;
 }
 
 function loadScript(src: string) {
@@ -738,12 +757,23 @@ export function AlphaApp() {
   const [arPreviewIndex, setArPreviewIndex] = useState<number | null>(null);
   const [arPreviewSeconds, setArPreviewSeconds] = useState(AR_PREVIEW_SECONDS);
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
+  const [classCode, setClassCode] = useState("");
+  const [liveClassStatus, setLiveClassStatus] = useState("");
+  const studentLiveRef = useRef<StudentClassHandle | null>(null);
+  const progressRef = useRef(progress);
+  const showHomeRef = useRef(showHome);
+
+  useEffect(() => {
+    progressRef.current = progress;
+    showHomeRef.current = showHome;
+  }, [progress, showHome]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const lessonParam = Number(params.get("lesson"));
     const requestedLesson = [1, 2, 3].includes(lessonParam) ? lessonParam : 1;
     const qa = params.get("qa");
+    setClassCode((params.get("class") ?? "").trim().toUpperCase());
     const isLocalQa = Boolean(qa) && ["localhost", "127.0.0.1"].includes(window.location.hostname);
     const isQaRun = Boolean(qa);
     setQaMode(isQaRun);
@@ -779,6 +809,43 @@ export function AlphaApp() {
       .catch((error) => setLoadError(error.message));
     if ("serviceWorker" in navigator) navigator.serviceWorker.register(publicAsset("sw.js")).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!hydrated || !classCode || showTeacher) return;
+    if (!liveClassConfigured) {
+      setLiveClassStatus("실시간 연결 설정을 불러오지 못했습니다. 일반 모드로 계속할 수 있습니다.");
+      return;
+    }
+    let cancelled = false;
+    setLiveClassStatus("연결 중…");
+    joinStudentClass(classCode, Number(progressRef.current.lesson ?? selectedLesson), toStudentLiveState(progressRef.current, showHomeRef.current))
+      .then((handle) => {
+        if (cancelled) {
+          handle.leave().catch(() => undefined);
+          return;
+        }
+        studentLiveRef.current = handle;
+        setLiveClassStatus(`연결됨 · ${handle.alias}`);
+      })
+      .catch((error) => setLiveClassStatus(error instanceof Error ? error.message : "실시간 수업 연결에 실패했습니다."));
+    return () => {
+      cancelled = true;
+      const handle = studentLiveRef.current;
+      studentLiveRef.current = null;
+      handle?.leave().catch(() => undefined);
+    };
+  }, [classCode, hydrated, progress.lesson, selectedLesson, showTeacher]);
+
+  useEffect(() => {
+    const handle = studentLiveRef.current;
+    if (!handle) return;
+    const timer = window.setTimeout(() => {
+      handle.update(toStudentLiveState(progress, showHome)).catch((error) => {
+        setLiveClassStatus(error instanceof Error ? error.message : "실시간 상태 전송에 실패했습니다.");
+      });
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [progress, showHome]);
 
   useEffect(() => {
     if (!hydrated || qaMode) return;
@@ -1025,9 +1092,10 @@ export function AlphaApp() {
         </section>
 
         <section className="start-panel">
-          <div className="lesson-picker" aria-label="학습 차시 선택">
+          <LiveClassNotice classCode={classCode} status={liveClassStatus} />
+          {!classCode && <div className="lesson-picker" aria-label="학습 차시 선택">
             {Object.values(LESSONS).map((item: any) => <button key={item.number} className={selectedLesson === item.number ? "active" : ""} onClick={() => chooseLesson(item.number)}><b>{item.number}차시</b><span>{item.title}</span></button>)}
-          </div>
+          </div>}
           {progress.started && !progress.completed && (
             <div className="resume-card">
               <span>이 기기의 {selectedLesson}차시 진행 기록이 있습니다</span>
@@ -1044,7 +1112,7 @@ export function AlphaApp() {
             <>
               <div className="privacy-note">
                 <span className="privacy-icon">◎</span>
-                <div><strong>카메라는 마커 인식에만 사용합니다</strong><p>실명·학번·사진·영상은 저장하거나 서버로 보내지 않습니다. 진행과 점수는 이 기기에만 저장됩니다.</p></div>
+                <div><strong>카메라는 마커 인식에만 사용합니다</strong><p>실명·학번·사진·영상은 저장하거나 전송하지 않습니다. 수업 QR로 접속한 경우에만 익명 별칭·단계·점수가 교사용 진행판에 공유됩니다.</p></div>
               </div>
               <div className="safety-note"><strong>안전</strong><span>카메라를 보며 걷지 않기 · 콘센트 접촉 및 충전기 분해 금지</span></div>
               <button className="primary-button camera-button" onClick={() => start("ar")}><span>카메라로 시작</span><small>{selectedConfig.stages.flatMap((item: any) => item.markers).map((item: any) => item.number).join("·")} 마커를 단계별 인식</small></button>
@@ -1069,6 +1137,7 @@ export function AlphaApp() {
     return (
       <main className={`app-shell ${progress.settings.largeText ? "large-text" : ""}`}>
         <Header progress={progress} lessonNumber={lessonConfig.number} elapsedMinutes={totalMinutes} onHome={() => setShowHome(true)} />
+        <LiveClassNotice classCode={classCode} status={liveClassStatus} />
         <section className="result-hero">
           <p className="eyebrow">MISSION COMPLETE</p>
           <div className="result-number">{progress.score}<small>/100</small></div>
@@ -1097,6 +1166,7 @@ export function AlphaApp() {
   return (
     <main className={`app-shell ${progress.settings.largeText ? "large-text" : ""} ${progress.settings.reducedMotion ? "reduced-motion" : ""}`}>
       <Header progress={progress} lessonNumber={lessonConfig.number} elapsedMinutes={elapsedMinutes} onHome={() => setShowHome(true)} />
+      <LiveClassNotice classCode={classCode} status={liveClassStatus} />
       <nav className="stage-rail" aria-label={`${lessonConfig.number}차시 단계`}>
         {stages.map((item, index) => <span key={item.number} className={index < progress.stageIndex ? "done" : index === progress.stageIndex ? "active" : ""}><b>{index < progress.stageIndex ? "✓" : item.number}</b><small>{item.name}</small></span>)}
       </nav>

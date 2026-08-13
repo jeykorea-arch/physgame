@@ -85,15 +85,23 @@ test("현재 단계가 아닌 마커의 AR 물체는 보이지 않는다", async
   assert.match(source, /visible="\$\{activeIndex === 5\}"/);
 });
 
-test("교사용 화면과 학생 결과는 실명·학번·서버 전송 없이 익명 집계한다", async () => {
+test("교사용 화면은 실명·학번 없이 익명 진행 상태만 실시간 집계한다", async () => {
   const studentSource = await readFile(new URL("app/AlphaApp.tsx", appRoot), "utf8");
   const teacherSource = await readFile(new URL("app/TeacherDashboard.tsx", appRoot), "utf8");
+  const liveSource = await readFile(new URL("app/firebase-live.ts", appRoot), "utf8");
+  const rules = JSON.parse(await readFile(new URL("firebase/database.rules.json", appRoot), "utf8"));
   assert.match(studentSource, /physgame-anonymous-result-v1/);
-  assert.match(teacherSource, /로컬 집계 모드/);
-  assert.match(teacherSource, /학생 데이터는 각 학생 기기에만 남습니다/);
+  assert.match(teacherSource, /실시간 익명 집계/);
+  assert.match(teacherSource, /학생별 익명 진행 상황/);
   assert.match(teacherSource, /오개념 설명 순서/);
   assert.match(teacherSource, /application\/json/);
-  assert.doesNotMatch(teacherSource, /fetch\(|XMLHttpRequest|WebSocket|sendBeacon|studentName|studentId/);
+  assert.match(liveSource, /classes\/\$\{classCode\}\/students\/\$\{user\.uid\}/);
+  assert.match(liveSource, /signInAnonymously/);
+  assert.equal(rules.rules[".read"], false);
+  assert.equal(rules.rules[".write"], false);
+  assert.match(rules.rules.classes.$classCode.students.$uid[".write"], /auth\.uid === \$uid/);
+  assert.match(rules.rules.classes.$classCode.students[".read"], /ownerUid/);
+  assert.doesNotMatch(`${studentSource}\n${teacherSource}\n${liveSource}`, /MediaRecorder|ImageCapture|FormData|sendBeacon|studentName|studentId/);
 });
 
 test("작은 화면에서도 과학 그래픽 아래 수치가 캔버스 안에 배치된다", async () => {
