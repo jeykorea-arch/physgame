@@ -8,8 +8,10 @@ const bank = JSON.parse(await readFile(new URL("../public/data/quiz_bank_v1.json
 const lessons = [1, 2, 3].map((number) => getLessonQuestions(bank, number));
 
 const correctFor = (question) => question.type === "short_answer_rubric"
-  ? "전력망에서는 전압을 높이고 낮추고, 충전기에서는 전류를 한쪽으로 만든 뒤 전압 골짜기를 메우고 스위칭으로 출력을 조절한다."
+  ? "전력망에서는 전압을 높이고 낮추고, 충전기에서는 전류를 한쪽으로 만든 뒤 전압의 낮아지는 부분을 메우고 흐름을 조절한다."
   : question.answer;
+
+const selectedQuestions = bank.questions.filter((question) => question.options.length > 0 && typeof question.answer === "string");
 
 const wrongFor = (question) => {
   if (question.type === "numeric") return -999;
@@ -32,6 +34,55 @@ test("L1-Q01~L3-Q30 정답 경로는 차시별 10/10, 100/100점이다", () => {
     });
     assert.equal(score, 100);
   });
+});
+
+test("v2 선택형 21문항은 정답 문자열을 선택지에 정확히 한 번 포함한다", () => {
+  assert.equal(bank.schema_version, "2.0");
+  assert.equal(bank.question_count, 30);
+  assert.equal(selectedQuestions.length, 21);
+  selectedQuestions.forEach((question) => {
+    assert.equal(question.options.filter((option) => option === question.answer).length, 1, question.id);
+  });
+});
+
+test("선택형 정답 위치는 1번 5개, 2번 6개, 3번 5개, 4번 5개이다", () => {
+  const positions = selectedQuestions.map((question) => question.options.indexOf(question.answer) + 1);
+  const counts = Object.fromEntries([1, 2, 3, 4].map((position) => [position, positions.filter((item) => item === position).length]));
+  assert.deepEqual(counts, { 1: 5, 2: 6, 3: 5, 4: 5 });
+  assert.deepEqual(counts, Object.fromEntries(Object.entries(bank.revision.answer_position_counts).map(([position, count]) => [Number(position), count])));
+  [1, 2, 3].forEach((lessonNumber) => {
+    const lessonPositions = selectedQuestions.filter((question) => question.lesson === lessonNumber).map((question) => question.options.indexOf(question.answer) + 1);
+    assert.ok(new Set(lessonPositions).size >= 3, `${lessonNumber}차시 위치 다양성`);
+  });
+});
+
+test("학생 문항과 학생 화면에는 지정된 어려운 전자공학 표현이 없다", async () => {
+  const studentSources = [
+    JSON.stringify(bank),
+    await readFile(new URL("../app/AlphaApp.tsx", import.meta.url), "utf8"),
+    await readFile(new URL("../lib/lesson-config.js", import.meta.url), "utf8"),
+  ].join("\n");
+  const forbidden = ["단상 브리지 정류기", "도통", "반주기", "맥동 직류", "리플", "듀티비", "충전 협상", "프로파일", "피드백 제어", "오실로스코프", "게이트 신호", "에너지 펄스", "ON/OFF"];
+  forbidden.forEach((term) => assert.doesNotMatch(studentSources, new RegExp(term), term));
+});
+
+test("다이오드 그래프·화살표·다이오드 짝은 같은 입력 변화 단계에 연동된다", async () => {
+  const source = await readFile(new URL("../app/AlphaApp.tsx", import.meta.url), "utf8");
+  assert.match(source, /const theta = \(value \* Math\.PI\) \/ 180/);
+  assert.match(source, /Math\.sin\(phase \+ theta\)/);
+  assert.match(source, /Math\.abs\(Math\.sin\(phase \+ theta\)\)/);
+  assert.match(source, /positiveDirection \? width - 22 : 22/);
+  assert.match(source, /arrow\(22, 279, width - 22, 279, yellow\)/);
+  assert.match(source, /positiveDirection \? "전류가 지나는 길: D1 · D4" : "전류가 지나는 길: D2 · D3"/);
+  assert.match(source, /nearZero \? "전류가 0이 되는 순간"/);
+});
+
+test("콘텐츠 v2는 이전 저장 상태를 섞지 않고 새 문항으로 시작한다", async () => {
+  const source = await readFile(new URL("../app/AlphaApp.tsx", import.meta.url), "utf8");
+  assert.match(source, /CONTENT_VERSION = "quiz-v2-highschool-2026-08-13"/);
+  assert.match(source, /APP_VERSION = 2/);
+  assert.match(source, /parsed\.contentVersion !== CONTENT_VERSION/);
+  assert.match(source, /physgame\.lesson\$\{lesson\}\.v2/);
 });
 
 test("30문항 모두 오답을 거부하고 두 번째 정답에 7점을 준다", () => {

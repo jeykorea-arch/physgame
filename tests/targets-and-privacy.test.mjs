@@ -54,6 +54,8 @@ test("GitHub Pages 하위 경로에서도 모든 런타임 자산을 현재 문�
   assert.match(source, /new URL\(relativePath, document\.baseURI\)/);
   assert.doesNotMatch(source, /(?:fetch|loadScript|register)\("\//);
   assert.match(serviceWorker, /self\.registration\.scope/);
+  assert.match(serviceWorker, /physgame-three-lessons-v4-quiz-v2/);
+  assert.match(serviceWorker, /fetch\(event\.request\)[\s\S]*cache\.put\(event\.request, copy\)/);
   assert.equal(manifest.start_url, "./");
   assert.equal(manifest.scope, "./");
 });
@@ -114,5 +116,6 @@ test("작은 화면에서도 과학 그래픽 아래 수치가 캔버스 안에 
   assert.match(source, /const labelBottom = height - 19/);
   assert.match(source, /ctx\.fillText\(`V₂=\$\{secondaryVoltage\.toFixed\(0\)\} V~`, width \* 0\.62, labelBottom\)/);
   assert.match(styles, /\.science-canvas \{[^}]*height: 270px/s);
+  assert.match(styles, /\.science-canvas-rectifier \{ height: 420px; \}/);
   assert.match(styles, /@media \(max-width: 370px\)[\s\S]*\.science-canvas \{ height: 260px; \}/);
 });

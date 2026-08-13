@@ -16,8 +16,9 @@ import { getDefaultSliders, getLessonConfig, LESSONS } from "../lib/lesson-confi
 import { joinStudentClass, liveClassConfigured, type StudentClassHandle, type StudentLiveState } from "./firebase-live";
 import { TeacherDashboard } from "./TeacherDashboard";
 
-const STORAGE_KEY = "physgame.lesson1.alpha.v1";
-const APP_VERSION = 1;
+const CONTENT_VERSION = "quiz-v2-highschool-2026-08-13";
+const STORAGE_KEY = "physgame.lesson1.alpha.v2";
+const APP_VERSION = 2;
 const AR_PREVIEW_SECONDS = 5;
 
 function timestamp() {
@@ -31,6 +32,7 @@ function publicAsset(path: string) {
 
 const initialProgress = {
   version: APP_VERSION,
+  contentVersion: CONTENT_VERSION,
   started: false,
   completed: false,
   mode: null as "ar" | "fallback" | null,
@@ -56,7 +58,7 @@ function makeInitialProgress(lesson = 1) {
 }
 
 function progressStorageKey(lesson: number) {
-  return lesson === 1 ? STORAGE_KEY : `physgame.lesson${lesson}.v1`;
+  return lesson === 1 ? STORAGE_KEY : `physgame.lesson${lesson}.v2`;
 }
 
 function mergeStoredProgress(raw: string | null, lesson = 1) {
@@ -64,7 +66,7 @@ function mergeStoredProgress(raw: string | null, lesson = 1) {
   if (!raw) return defaults;
   try {
     const parsed = JSON.parse(raw);
-    if (parsed.version !== APP_VERSION) return defaults;
+    if (parsed.version !== APP_VERSION || parsed.contentVersion !== CONTENT_VERSION) return defaults;
     return {
       ...defaults,
       ...parsed,
@@ -417,46 +419,101 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
         ctx.fillStyle = yellow;
         ctx.fillText(`V₂=${secondaryVoltage.toFixed(0)} V~`, width * 0.62, labelBottom);
       } else if (visualType === "rectifier") {
-        const positiveHalf = value % 360 < 180;
+        const theta = (value * Math.PI) / 180;
+        const inputCurrent = Math.sin(theta);
+        const outputCurrent = Math.abs(inputCurrent);
+        const nearZero = Math.abs(inputCurrent) < 0.05;
+        const positiveDirection = inputCurrent > 0;
+        const graphLeft = 16;
+        const graphWidth = width - graphLeft * 2;
+        const referenceX = graphLeft + graphWidth / 2;
+        const drawCurrentGraph = (top: number, graphHeight: number, sample: (phase: number) => number, color: string, oneSided: boolean) => {
+          const baseline = oneSided ? top + graphHeight - 5 : top + graphHeight / 2;
+          const amplitude = oneSided ? graphHeight - 12 : graphHeight * 0.42;
+          ctx.strokeStyle = "#304656";
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(graphLeft, baseline); ctx.lineTo(graphLeft + graphWidth, baseline); ctx.stroke();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          for (let x = 0; x <= graphWidth; x += 2) {
+            const phase = ((x / graphWidth) * Math.PI * 4) - Math.PI * 2;
+            const current = sample(phase);
+            const y = baseline - current * amplitude;
+            if (x === 0) ctx.moveTo(graphLeft + x, y);
+            else ctx.lineTo(graphLeft + x, y);
+          }
+          ctx.stroke();
+          const currentValue = sample(0);
+          const pointY = baseline - currentValue * amplitude;
+          ctx.strokeStyle = ink;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.moveTo(referenceX, top - 2); ctx.lineTo(referenceX, top + graphHeight + 2); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = color;
+          ctx.beginPath(); ctx.arc(referenceX, pointY, 5, 0, Math.PI * 2); ctx.fill();
+        };
+
         ctx.fillStyle = ink;
-        ctx.fillText("입력 교류", 14, 25);
-        ctx.fillText("정류 직후", Math.max(14, width * 0.57), 25);
-        ctx.strokeStyle = "#304656";
-        ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(12, 74); ctx.lineTo(width * 0.43, 74); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(width * 0.55, 74); ctx.lineTo(width - 12, 74); ctx.stroke();
-        plotWave(14, 35, width * 0.38, 78, (phase) => Math.sin(phase), cyan);
-        plotWave(width * 0.57, 35, width * 0.38, 78, (phase) => Math.abs(Math.sin(phase)) * 0.95 - 0.45, yellow);
+        ctx.font = "800 12px system-ui, sans-serif";
+        ctx.fillText("입력 전류: 방향이 주기적으로 바뀜", 14, 18);
+        ctx.fillStyle = cyan;
+        ctx.font = "700 11px system-ui, sans-serif";
+        ctx.fillText(`현재 ${inputCurrent.toFixed(2)} A · ${nearZero ? "0" : positiveDirection ? "+방향" : "−방향"}`, 14, 37);
+        drawCurrentGraph(46, 66, (phase) => Math.sin(phase + theta), cyan, false);
+        if (nearZero) {
+          ctx.fillStyle = muted;
+          ctx.fillText("입력 화살표: 전류 0", 14, 132);
+        } else {
+          arrow(positiveDirection ? 22 : width - 22, 126, positiveDirection ? width - 22 : 22, 126, cyan);
+          ctx.fillStyle = cyan;
+          ctx.fillText(positiveDirection ? "입력 +방향 →" : "← 입력 −방향", 14, 145);
+        }
+
+        ctx.fillStyle = ink;
+        ctx.font = "800 12px system-ui, sans-serif";
+        ctx.fillText("출력 전류: 한 방향으로 흐름", 14, 172);
+        ctx.fillStyle = yellow;
+        ctx.font = "700 11px system-ui, sans-serif";
+        ctx.fillText(`현재 ${outputCurrent.toFixed(2)} A · +방향`, 14, 191);
+        drawCurrentGraph(199, 66, (phase) => Math.abs(Math.sin(phase + theta)), yellow, true);
+        arrow(22, 279, width - 22, 279, yellow);
+        ctx.fillStyle = yellow;
+        ctx.fillText("출력 +방향 → (항상 같음)", 14, 298);
+
         const cx = width / 2;
-        const cy = height - 78;
-        const size = Math.min(56, width * 0.18);
+        const cy = 350;
+        const size = Math.min(46, width * 0.15);
         ctx.strokeStyle = ink; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.moveTo(cx, cy - size); ctx.lineTo(cx + size, cy); ctx.lineTo(cx, cy + size); ctx.lineTo(cx - size, cy); ctx.closePath(); ctx.stroke();
-        const pathColor = yellow;
-        ctx.fillStyle = positiveHalf ? pathColor : muted;
-        ctx.fillText("D1", cx - size + 8, cy - 20); ctx.fillText("D4", cx + 18, cy + 30);
-        ctx.fillStyle = positiveHalf ? muted : pathColor;
-        ctx.fillText("D2", cx + 18, cy - 20); ctx.fillText("D3", cx - size + 8, cy + 30);
-        arrow(cx - size - 42, cy, cx - size + 2, cy, positiveHalf ? cyan : yellow);
-        arrow(cx + size - 2, cy, cx + size + 42, cy, yellow);
-        ctx.fillStyle = muted; ctx.font = "700 11px system-ui, sans-serif";
-        ctx.fillText(positiveHalf ? "도통 경로 D1 → 부하 → D4" : "도통 경로 D2 → 부하 → D3", Math.max(12, cx - 83), height - 12);
+        ctx.fillStyle = !nearZero && positiveDirection ? yellow : muted;
+        ctx.fillText("D1", cx - size + 7, cy - 16); ctx.fillText("D4", cx + 14, cy + 25);
+        ctx.fillStyle = !nearZero && !positiveDirection ? yellow : muted;
+        ctx.fillText("D2", cx + 14, cy - 16); ctx.fillText("D3", cx - size + 7, cy + 25);
+        ctx.fillStyle = nearZero ? muted : yellow;
+        ctx.font = "800 11px system-ui, sans-serif";
+        const pathLabel = nearZero ? "전류가 0이 되는 순간" : positiveDirection ? "전류가 지나는 길: D1 · D4" : "전류가 지나는 길: D2 · D3";
+        const labelWidth = ctx.measureText(pathLabel).width;
+        ctx.fillText(pathLabel, Math.max(12, (width - labelWidth) / 2), height - 12);
       } else if (visualType === "smoothing") {
         const ripple = Math.max(0.08, Math.min(0.7, 260 / value));
-        ctx.fillStyle = ink; ctx.fillText("맥동 직류", 14, 25); ctx.fillText("평활 출력", width * 0.58, 25);
-        plotWave(14, 38, width * 0.38, 94, (phase) => Math.abs(Math.sin(phase)) * 0.95 - 0.45, muted);
-        plotWave(width * 0.56, 38, width * 0.4, 94, (phase) => 0.55 - ripple * ((phase % Math.PI) / Math.PI), cyan);
+        ctx.fillStyle = ink; ctx.font = "700 11px system-ui, sans-serif";
+        ctx.fillText("한 방향 전류", 14, 20); ctx.fillText("크기가 변함", 14, 36);
+        ctx.fillText("축전기를 지난 뒤", Math.max(14, width * 0.56), 20); ctx.fillText("출력 변화가 작음", Math.max(14, width * 0.56), 36);
+        plotWave(14, 48, width * 0.38, 84, (phase) => Math.abs(Math.sin(phase)) * 0.95 - 0.45, muted);
+        plotWave(width * 0.56, 48, width * 0.4, 84, (phase) => 0.55 - ripple * ((phase % Math.PI) / Math.PI), cyan);
         ctx.fillStyle = cyan;
         ctx.fillRect(width * 0.18, 160, 18, 70);
         ctx.fillRect(width * 0.18 - 12, 172, 42, 5);
         ctx.fillRect(width * 0.18 - 12, 210, 42, 5);
         arrow(width * 0.31, 193, width * 0.58, 193, yellow);
         ctx.fillStyle = ink; ctx.fillText(`C=${value} μF`, 14, height - 18);
-        ctx.fillStyle = yellow; ctx.fillText(`상대 리플 ${(ripple * 100).toFixed(0)}%`, Math.max(14, width - 112), height - 18);
+        ctx.fillStyle = yellow; ctx.fillText(`전압 출렁임 ${(ripple * 100).toFixed(0)}%`, Math.max(14, width - 126), height - 18);
       } else if (visualType === "switching") {
         const duty = value / 100;
-        ctx.fillStyle = ink; ctx.fillText("게이트 신호", 14, 25); ctx.fillText("에너지 펄스", width * 0.57, 25);
-        const pulseLeft = 14; const pulseTop = 55; const pulseWidth = width - 28; const cell = pulseWidth / 5;
+        ctx.fillStyle = ink; ctx.fillText("전류를 켜고 끄는 신호", 14, 22);
+        ctx.fillStyle = yellow; ctx.fillText("나누어 전달되는 에너지", 14, 43);
+        const pulseLeft = 14; const pulseTop = 65; const pulseWidth = width - 28; const cell = pulseWidth / 5;
         ctx.strokeStyle = cyan; ctx.lineWidth = 3; ctx.beginPath();
         for (let i = 0; i < 5; i += 1) {
           const x = pulseLeft + i * cell;
@@ -469,27 +526,27 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
         }
         arrow(24, 220, width - 24, 220, yellow);
         ctx.fillStyle = muted; ctx.font = "700 11px system-ui, sans-serif";
-        ctx.fillText("ON: 작은 전압 강하", 14, height - 17);
-        ctx.fillText("OFF: 작은 전류", Math.max(14, width - 108), height - 17);
+        ctx.fillText("켜짐: 전류가 흐름", 14, height - 17);
+        ctx.fillText("꺼짐: 전류가 거의 0", Math.max(14, width - 136), height - 17);
       } else if (visualType === "faults") {
         const fault = Math.round(value);
-        const labels = ["다이오드 단선", "축전기 제거", "트랜지스터 ON 고정"];
+        const labels = ["다이오드 하나 끊김", "축전기 제거", "트랜지스터 계속 켜짐"];
         ctx.fillStyle = yellow; ctx.font = "800 15px system-ui, sans-serif"; ctx.fillText(`LOG 0${fault} · ${labels[fault - 1]}`, 14, 28);
         ctx.strokeStyle = "#304656"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(14, 55); ctx.lineTo(width - 14, 55); ctx.stroke();
         if (fault === 1) {
           plotWave(16, 72, width - 32, 116, (phase) => Math.max(0, Math.sin(phase)) * 0.9 - 0.42, yellow);
-          ctx.fillStyle = ink; ctx.fillText("일부 반주기 경로 소실", 14, height - 44); ctx.fillStyle = muted; ctx.fillText("평균 출력↓ · 리플↑", 14, height - 18);
+          ctx.fillStyle = ink; ctx.fillText("입력의 일부 구간에서 전류가 끊김", 14, height - 44); ctx.fillStyle = muted; ctx.fillText("평균 출력↓ · 출력 변화↑", 14, height - 18);
         } else if (fault === 2) {
           plotWave(16, 72, width - 32, 116, (phase) => Math.abs(Math.sin(phase)) * 0.95 - 0.45, yellow);
-          ctx.fillStyle = ink; ctx.fillText("골짜기를 메우는 방전 없음", 14, height - 44); ctx.fillStyle = muted; ctx.fillText("출력 리플 크게 증가", 14, height - 18);
+          ctx.fillStyle = ink; ctx.fillText("낮아지는 전압을 보충하지 못함", 14, height - 44); ctx.fillStyle = muted; ctx.fillText("출력 전압 변화가 크게 증가", 14, height - 18);
         } else {
           ctx.fillStyle = yellow; ctx.fillRect(18, 86, width - 36, 62);
-          ctx.fillStyle = "#08131d"; ctx.font = "900 24px system-ui, sans-serif"; ctx.fillText("ON", width / 2 - 20, 126);
-          ctx.fillStyle = ink; ctx.font = "700 13px system-ui, sans-serif"; ctx.fillText("스위칭·보호 제어 상실", 14, height - 44); ctx.fillStyle = muted; ctx.fillText("과전류·발열 위험", 14, height - 18);
+          ctx.fillStyle = "#08131d"; ctx.font = "900 22px system-ui, sans-serif"; ctx.fillText("계속 켜짐", width / 2 - 42, 126);
+          ctx.fillStyle = ink; ctx.font = "700 13px system-ui, sans-serif"; ctx.fillText("전류 조절과 보호가 어려움", 14, height - 44); ctx.fillStyle = muted; ctx.fillText("큰 전류·발열 위험", 14, height - 18);
         }
       } else if (visualType === "journey") {
         const step = Math.round(value);
-        const labels = ["발전", "송전·강압", "정류", "평활", "출력 제어"];
+        const labels = ["발전", "송전·전압 낮추기", "한 방향 전류", "출력 변화 줄이기", "전류 조절"];
         const colors = [yellow, cyan, yellow, cyan, yellow];
         const usable = width - 36;
         labels.forEach((label, index) => {
@@ -512,7 +569,7 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
     return () => observer.disconnect();
   }, [reducedMotion, value, visualType]);
 
-  return <canvas ref={canvasRef} className="science-canvas" role="img" aria-label={`${stageName} 과학 시뮬레이션`} />;
+  return <canvas ref={canvasRef} className={`science-canvas science-canvas-${visualType}`} role="img" aria-label={`${stageName} 과학 시뮬레이션`} />;
 }
 
 function QuestionInput({ question, value, setValue }: any) {
@@ -525,7 +582,7 @@ function QuestionInput({ question, value, setValue }: any) {
           maxLength={360}
           rows={6}
           onChange={(event) => setValue(event.target.value)}
-          placeholder="전력망에서는 전압을 … 충전기에서는 …"
+          placeholder="전력망에서는 전압을 높이고 … 충전기에서는 전류를 …"
         />
         <small>‘높이고·낮추고·한쪽으로·메우고·조절’의 다섯 역할을 모두 포함하세요. 자동 판정은 수업 중 참고용이며 최종 서술 평가는 교사가 확인합니다.</small>
       </label>
@@ -780,17 +837,22 @@ export function AlphaApp() {
     setQaMode(isQaRun);
     setSelectedLesson(requestedLesson);
     setShowTeacher(params.get("teacher") === "1");
-    if (isLocalQa && (qa === "stage-2-manipulate" || qa === "stage-3-manipulate")) {
-      const stageIndex = qa === "stage-2-manipulate" ? 1 : 2;
+    const qaStageMatch = qa?.match(/^stage-([1-3])-manipulate$/);
+    if (isLocalQa && qaStageMatch) {
+      const stageIndex = Number(qaStageMatch[1]) - 1;
       const qaStages = getLessonConfig(requestedLesson).stages;
+      const qaStage = qaStages[stageIndex];
+      const qaValueParam = Number(params.get("qaValue"));
+      const qaValue = Number.isFinite(qaValueParam) ? Math.max(qaStage.sliderMin, Math.min(qaStage.sliderMax, qaValueParam)) : qaStage.sliderDefault;
       setProgress({
         ...makeInitialProgress(requestedLesson),
         started: true,
         mode: "fallback",
         stageIndex,
         phase: "manipulate",
-        questionIndex: stageIndex === 1 ? 2 : 6,
-        predictions: { [stageIndex]: qaStages[stageIndex].predictionAnswer },
+        questionIndex: qaStages[stageIndex].questions[0],
+        predictions: { [stageIndex]: qaStage.predictionAnswer },
+        sliders: { ...getDefaultSliders(requestedLesson), [stageIndex]: qaValue },
         startedAt: Date.now(),
       });
       setShowHome(false);
@@ -921,6 +983,15 @@ export function AlphaApp() {
     setProgress((current: any) => ({ ...current, ...(typeof patch === "function" ? patch(current) : patch) }));
   }, []);
 
+  const scrollToContentTop = useCallback(() => {
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: progressRef.current.settings.reducedMotion ? "auto" : "smooth" }));
+  }, []);
+
+  const moveToPhase = useCallback((phase: string) => {
+    mutate({ phase });
+    scrollToContentTop();
+  }, [mutate, scrollToContentTop]);
+
   const start = (mode: "ar" | "fallback") => {
     setProgress({
       ...makeInitialProgress(selectedLesson),
@@ -1045,11 +1116,13 @@ export function AlphaApp() {
   const nextQuestion = () => {
     if (progress.questionIndex === lessonQuestions.length - 1) {
       mutate({ completed: true, completedAt: timestamp(), phase: "complete" });
+      scrollToContentTop();
       return;
     }
     const nextIndex = progress.questionIndex + 1;
     const isStageEnd = !stage.questions.includes(nextIndex);
     mutate({ questionIndex: nextIndex, phase: isStageEnd ? "stageComplete" : "quiz" });
+    scrollToContentTop();
   };
 
   const nextStage = () => {
@@ -1181,7 +1254,7 @@ export function AlphaApp() {
         <section className="panel takeaway-panel">
           <p className="eyebrow">{lessonConfig.number}차시 필수 산출</p>
           <h2>{lessonConfig.outcome}</h2>
-          <div className="formula-row"><span>{lessonConfig.number === 1 ? "P=VI → I²R" : lessonConfig.number === 2 ? "AC → 정류 → 평활 → 스위칭" : "높이고 → 낮추고 → 한쪽으로 → 메우고 → 조절"}</span></div>
+          <div className="formula-row"><span>{lessonConfig.number === 1 ? "P=VI → I²R" : lessonConfig.number === 2 ? "교류 입력 → 한 방향 전류 → 출력 변화 줄이기 → 전류 조절" : "높이고 → 낮추고 → 한쪽으로 → 메우고 → 조절"}</span></div>
         </section>
         <section className="panel review-panel">
           <p className="eyebrow">교사 설명 전에 다시 볼 개념</p>
@@ -1228,7 +1301,7 @@ export function AlphaApp() {
             <p>{stage.observeText}</p>
             <div className="simulation-label">과학 설명용 별도 시뮬레이션 · 마커 삽화와 분리</div>
           </div>
-          <button className="primary-button" onClick={() => mutate({ phase: "predict" })}>관찰 완료 · 예측하기</button>
+          <button className="primary-button" onClick={() => moveToPhase("predict")}>관찰 완료 · 예측하기</button>
           {progress.mode === "fallback" && <p className="mode-note">비AR 모드 · AR과 같은 관찰 자료입니다.</p>}
         </section>
       )}
@@ -1243,7 +1316,7 @@ export function AlphaApp() {
             </div>
             {progress.predictions[progress.stageIndex] && <p className="prediction-saved">예측 저장됨 · 다음 화면의 수치로 검증합니다.</p>}
           </section>
-          <button className="primary-button" disabled={!progress.predictions[progress.stageIndex]} onClick={() => mutate({ phase: "manipulate" })}>예측 저장 · 조작하기</button>
+          <button className="primary-button" disabled={!progress.predictions[progress.stageIndex]} onClick={() => moveToPhase("manipulate")}>예측 저장 · 조작하기</button>
         </section>
       )}
 
@@ -1259,7 +1332,7 @@ export function AlphaApp() {
             <p className="manipulation-note">{stage.manipulationNote}</p>
             {progress.predictions[progress.stageIndex] && <div className={`prediction-check ${progress.predictions[progress.stageIndex] === stage.predictionAnswer ? "correct" : "revise"}`}><span>내 예측</span><b>{progress.predictions[progress.stageIndex]}</b><small>{progress.predictions[progress.stageIndex] === stage.predictionAnswer ? "수치 변화와 일치합니다." : `수치 변화와 비교하세요. 올바른 방향은 ‘${stage.predictionAnswer}’입니다.`}</small></div>}
           </div>
-          <button className="primary-button" onClick={() => mutate({ phase: "quiz" })}>검증 완료 · 퀴즈 풀기</button>
+          <button className="primary-button" onClick={() => moveToPhase("quiz")}>검증 완료 · 퀴즈 풀기</button>
         </section>
       )}
 
