@@ -53,19 +53,19 @@ export function TeacherDashboard({ bank, onExit }: { bank: { questions: Array<{ 
   const studentUrl = useMemo(() => {
     const url = new URL(document.baseURI);
     const params = new URLSearchParams({ lesson: String(lesson) });
-    if (classCode) params.set("class", classCode);
+    if (classCode && liveOpen) params.set("class", classCode);
     url.search = params.toString();
     return url.toString();
-  }, [classCode, lesson]);
+  }, [classCode, lesson, liveOpen]);
 
   useEffect(() => {
     return () => liveHandleRef.current?.detach();
   }, []);
 
   useEffect(() => {
-    if (!qrRef.current) return;
+    if (!liveOpen || !qrRef.current) return;
     QRCode.toCanvas(qrRef.current, studentUrl, { width: 280, margin: 2, color: { dark: "#07141d", light: "#ffffff" } }).catch(() => undefined);
-  }, [studentUrl]);
+  }, [liveOpen, studentUrl]);
 
   useEffect(() => {
     if (!running || secondsLeft <= 0) return;
@@ -188,9 +188,16 @@ export function TeacherDashboard({ bank, onExit }: { bank: { questions: Array<{ 
         <article className="teacher-card qr-card">
           <p className="eyebrow">STUDENT ENTRY</p>
           <h1>{lesson}차시 · {config.title}</h1>
-          <canvas ref={qrRef} aria-label={`${lesson}차시 학생 접속 QR 코드`} />
-          <a href={studentUrl} target="_blank" rel="noreferrer">{studentUrl}</a>
-          <p>학생은 이름·학번 입력 없이 접속합니다.</p>
+          {liveOpen ? <>
+            <canvas ref={qrRef} aria-label={`${lesson}차시 실시간 수업 접속 QR 코드`} />
+            <div className="class-code-display"><span>직접 입력 코드</span><strong>{classCode}</strong></div>
+            <a href={studentUrl} target="_blank" rel="noreferrer">{studentUrl}</a>
+            <p>이 QR 또는 6자리 코드를 안내해야 접속 현황에 표시됩니다.</p>
+          </> : <div className="qr-locked">
+            <strong>아직 실시간 수업이 열리지 않았습니다</strong>
+            <p>오른쪽의 ‘실시간 수업 열기’를 먼저 누르면 추적 가능한 QR과 6자리 코드가 생성됩니다.</p>
+            <button onClick={startLiveClass}>실시간 수업 열기</button>
+          </div>}
         </article>
 
         <article className="teacher-card timer-card">

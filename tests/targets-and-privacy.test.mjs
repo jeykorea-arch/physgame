@@ -93,6 +93,10 @@ test("교사용 화면은 실명·학번 없이 익명 진행 상태만 실시�
   assert.match(studentSource, /physgame-anonymous-result-v1/);
   assert.match(teacherSource, /실시간 익명 집계/);
   assert.match(teacherSource, /학생별 익명 진행 상황/);
+  assert.match(teacherSource, /liveOpen \? <>/);
+  assert.match(teacherSource, /아직 실시간 수업이 열리지 않았습니다/);
+  assert.match(studentSource, /6자리 수업 코드/);
+  assert.match(studentSource, /joinLiveClass/);
   assert.match(teacherSource, /오개념 설명 순서/);
   assert.match(teacherSource, /application\/json/);
   assert.match(liveSource, /classes\/\$\{classCode\}\/students\/\$\{user\.uid\}/);

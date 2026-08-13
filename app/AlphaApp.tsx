@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import {
   GUIDED_SCORE,
   expectedLessonSeconds,
@@ -758,6 +758,7 @@ export function AlphaApp() {
   const [arPreviewSeconds, setArPreviewSeconds] = useState(AR_PREVIEW_SECONDS);
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
   const [classCode, setClassCode] = useState("");
+  const [joinCodeInput, setJoinCodeInput] = useState("");
   const [liveClassStatus, setLiveClassStatus] = useState("");
   const studentLiveRef = useRef<StudentClassHandle | null>(null);
   const progressRef = useRef(progress);
@@ -827,7 +828,14 @@ export function AlphaApp() {
         studentLiveRef.current = handle;
         setLiveClassStatus(`연결됨 · ${handle.alias}`);
       })
-      .catch((error) => setLiveClassStatus(error instanceof Error ? error.message : "실시간 수업 연결에 실패했습니다."));
+      .catch((error) => {
+        if (cancelled) return;
+        setLiveClassStatus(error instanceof Error ? error.message : "실시간 수업 연결에 실패했습니다.");
+        const url = new URL(window.location.href);
+        url.searchParams.delete("class");
+        history.replaceState(null, "", `${url.pathname}${url.search ? url.search : ""}`);
+        setClassCode("");
+      });
     return () => {
       cancelled = true;
       const handle = studentLiveRef.current;
@@ -926,6 +934,21 @@ export function AlphaApp() {
     setCameraStatus("");
     setArPreviewIndex(null);
     setShowHome(false);
+  };
+
+  const joinLiveClass = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const normalized = joinCodeInput.trim().toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, "").slice(0, 6);
+    if (normalized.length !== 6) {
+      setLiveClassStatus("교사 화면의 6자리 수업 코드를 입력하세요.");
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.search = new URLSearchParams({ lesson: String(selectedLesson), class: normalized }).toString();
+    history.replaceState(null, "", `${url.pathname}?${url.searchParams.toString()}`);
+    setJoinCodeInput(normalized);
+    setClassCode(normalized);
+    setLiveClassStatus("연결 중…");
   };
 
   const resume = () => {
@@ -1096,6 +1119,12 @@ export function AlphaApp() {
           {!classCode && <div className="lesson-picker" aria-label="학습 차시 선택">
             {Object.values(LESSONS).map((item: any) => <button key={item.number} className={selectedLesson === item.number ? "active" : ""} onClick={() => chooseLesson(item.number)}><b>{item.number}차시</b><span>{item.title}</span></button>)}
           </div>}
+          {!classCode && liveClassConfigured && <form className="student-join-panel" onSubmit={joinLiveClass}>
+            <strong>교사용 진행판에 연결하기</strong>
+            <p>기본 주소로 접속했다면 교사 화면의 6자리 수업 코드를 입력하세요. QR로 접속한 경우에는 자동 연결됩니다.</p>
+            <div><input aria-label="6자리 수업 코드" inputMode="text" autoCapitalize="characters" autoComplete="off" maxLength={6} placeholder="예: A2B3C4" value={joinCodeInput} onChange={(event) => setJoinCodeInput(event.target.value.toUpperCase().replace(/[^A-HJ-NP-Z2-9]/g, ""))} /><button type="submit">수업 연결</button></div>
+            {liveClassStatus && <small role="alert">{liveClassStatus}</small>}
+          </form>}
           {progress.started && !progress.completed && (
             <div className="resume-card">
               <span>이 기기의 {selectedLesson}차시 진행 기록이 있습니다</span>

@@ -332,6 +332,21 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .qr-card canvas { display: block; width: min(280px, 100%); height: auto !important; margin: 10px auto; background: white; }
 .qr-card a { display: block; overflow-wrap: anywhere; color: var(--cyan); font-size: 11px; }
 .qr-card > p:last-child { color: var(--muted); font-size: 10px; }
+.qr-locked { display: grid; place-items: center; min-height: 260px; padding: 24px; background: #0a1822; border: 1px dashed #385063; }
+.qr-locked strong { color: var(--yellow); font-size: 18px; }
+.qr-locked p { max-width: 360px; color: #c5d0d6; font-size: 12px; line-height: 1.7; }
+.qr-locked button { min-height: 46px; padding: 0 18px; background: var(--yellow); border: 0; color: var(--night); font-weight: 950; cursor: pointer; }
+.class-code-display { margin: 10px auto; padding: 10px; background: #0a1822; }
+.class-code-display span, .class-code-display strong { display: block; }
+.class-code-display span { color: var(--muted); font-size: 9px; }
+.class-code-display strong { margin-top: 3px; color: var(--yellow); font-size: 26px; letter-spacing: .18em; }
+.student-join-panel { margin: 14px 0; padding: 15px; background: rgba(103, 232, 164, .06); border: 1px solid #2c6c58; }
+.student-join-panel > strong { color: #67e8a4; font-size: 13px; }
+.student-join-panel > p { margin: 6px 0 12px; color: #c4d1d7; font-size: 10px; line-height: 1.55; }
+.student-join-panel > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+.student-join-panel input { min-width: 0; height: 48px; padding: 0 12px; background: #06131c; border: 1px solid #486272; color: var(--ink); font-size: 18px; font-weight: 950; letter-spacing: .12em; text-transform: uppercase; }
+.student-join-panel button { min-height: 48px; padding: 0 14px; background: #67e8a4; border: 0; color: var(--night); font-weight: 950; cursor: pointer; }
+.student-join-panel > small { display: block; margin-top: 8px; color: var(--yellow); font-size: 10px; }
 .timer-card { grid-column: span 7; }
 .teacher-timer { color: var(--yellow); font-size: clamp(68px, 10vw, 130px); font-weight: 950; line-height: 1; letter-spacing: -.06em; font-variant-numeric: tabular-nums; }
 .timer-phases { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 14px 0; }
@@ -403,6 +418,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
   .icon-button { width: 34px; height: 34px; }
   .science-canvas { height: 260px; }
   .result-grid { grid-template-columns: 1fr; }
+  .student-join-panel > div { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 759px) {
