@@ -41,7 +41,22 @@ export type LiveStudent = {
   completedCount: number;
   score: number;
   mode: "ar" | "non-ar";
+  responses?: Record<string, LiveQuestionResponse>;
   lastSeen: number;
+};
+
+export type LiveSubmission = {
+  correct: boolean;
+  choiceCode: string;
+};
+
+export type LiveQuestionResponse = {
+  attempts: number;
+  completed: boolean;
+  score: number;
+  guided: boolean;
+  hadError: boolean;
+  submissions?: LiveSubmission[] | Record<string, LiveSubmission>;
 };
 
 export type StudentLiveState = Omit<LiveStudent, "uid" | "alias" | "lastSeen" | "connected">;
@@ -101,7 +116,7 @@ function friendlyFirebaseError(error: unknown) {
   return "실시간 수업 연결에 실패했습니다. 잠시 후 다시 시도해 주세요.";
 }
 
-export async function joinStudentClass(classCodeInput: string, lesson: number, initial: StudentLiveState) {
+export async function joinStudentClass(classCodeInput: string, lesson: number, nicknameInput: string, initial: StudentLiveState) {
   const classCode = normalizeClassCode(classCodeInput);
   if (classCode.length !== 6) throw new Error("수업 코드가 올바르지 않습니다.");
   const user = await anonymousUser();
@@ -113,7 +128,8 @@ export async function joinStudentClass(classCodeInput: string, lesson: number, i
   if (Number(classInfo.lesson) !== lesson) throw new Error(`이 수업은 현재 ${classInfo.lesson}차시로 열려 있습니다.`);
 
   const studentRef = ref(database, `classes/${classCode}/students/${user.uid}`);
-  const alias = `학생-${user.uid.slice(-6).toUpperCase()}`;
+  const alias = nicknameInput.trim().replace(/\s+/g, " ").slice(0, 12);
+  if (alias.length < 2) throw new Error("2~12자의 수업용 익명 닉네임을 입력해 주세요.");
   const payload = { ...initial, alias, connected: true, lastSeen: serverTimestamp() };
   await set(studentRef, payload);
   const disconnectAction = onDisconnect(studentRef);

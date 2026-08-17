@@ -17,7 +17,19 @@
           "$uid": {
             ".read": "auth != null && auth.uid === $uid",
             ".write": "auth != null && auth.uid === $uid && (root.child('classes').child($classCode).child('public').child('active').val() === true || newData.child('connected').val() === false)",
-            ".validate": "newData.hasChildren(['alias','connected','lesson','stageIndex','phase','questionIndex','completedCount','score','mode','lastSeen']) && newData.child('alias').isString() && newData.child('alias').val().length <= 20 && newData.child('connected').isBoolean() && newData.child('lesson').isNumber() && newData.child('lesson').val() >= 1 && newData.child('lesson').val() <= 3 && newData.child('stageIndex').isNumber() && newData.child('stageIndex').val() >= 0 && newData.child('stageIndex').val() <= 3 && newData.child('phase').isString() && newData.child('phase').val().length <= 24 && newData.child('questionIndex').isNumber() && newData.child('questionIndex').val() >= -1 && newData.child('questionIndex').val() <= 10 && newData.child('completedCount').isNumber() && newData.child('completedCount').val() >= 0 && newData.child('completedCount').val() <= 10 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= 100 && newData.child('mode').isString() && (newData.child('mode').val() === 'ar' || newData.child('mode').val() === 'non-ar') && newData.child('lastSeen').isNumber()"
+            ".validate": "newData.hasChildren(['alias','connected','lesson','stageIndex','phase','questionIndex','completedCount','score','mode','lastSeen']) && newData.child('alias').isString() && newData.child('alias').val().length >= 2 && newData.child('alias').val().length <= 12 && newData.child('connected').isBoolean() && newData.child('lesson').isNumber() && newData.child('lesson').val() >= 1 && newData.child('lesson').val() <= 3 && newData.child('stageIndex').isNumber() && newData.child('stageIndex').val() >= 0 && newData.child('stageIndex').val() <= 3 && newData.child('phase').isString() && newData.child('phase').val().length <= 24 && newData.child('questionIndex').isNumber() && newData.child('questionIndex').val() >= -1 && newData.child('questionIndex').val() <= 10 && newData.child('completedCount').isNumber() && newData.child('completedCount').val() >= 0 && newData.child('completedCount').val() <= 10 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= 100 && newData.child('mode').isString() && (newData.child('mode').val() === 'ar' || newData.child('mode').val() === 'non-ar') && newData.child('lastSeen').isNumber()",
+            "responses": {
+              ".validate": "newData.numChildren() <= 10",
+              "$questionId": {
+                ".validate": "newData.hasChildren(['attempts','completed','score','guided','hadError','submissions']) && newData.child('attempts').isNumber() && newData.child('attempts').val() >= 1 && newData.child('attempts').val() <= 3 && newData.child('completed').isBoolean() && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= 10 && newData.child('guided').isBoolean() && newData.child('hadError').isBoolean()",
+                "submissions": {
+                  ".validate": "newData.numChildren() >= 1 && newData.numChildren() <= 3",
+                  "$attemptIndex": {
+                    ".validate": "newData.hasChildren(['correct','choiceCode']) && newData.child('correct').isBoolean() && newData.child('choiceCode').isString() && newData.child('choiceCode').val().length <= 12"
+                  }
+                }
+              }
+            }
           }
         }
       }

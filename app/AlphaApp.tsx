@@ -45,6 +45,7 @@ const initialProgress = {
   sliders: { 0: 50, 1: 500, 2: 100 } as Record<number, number>,
   startedAt: null as number | null,
   completedAt: null as number | null,
+  nickname: "",
   settings: { largeText: false, reducedMotion: false },
 };
 
@@ -82,6 +83,20 @@ function mergeStoredProgress(raw: string | null, lesson = 1) {
 }
 
 function toStudentLiveState(progress: any, showHome: boolean): StudentLiveState {
+  const responses = Object.fromEntries(Object.entries(progress.records ?? {}).map(([id, recordValue]) => {
+    const record = recordValue as any;
+    return [id, {
+      attempts: Math.max(0, Math.min(3, Number(record.attempts ?? 0))),
+      completed: Boolean(record.completed),
+      score: Math.max(0, Math.min(10, Number(record.score ?? 0))),
+      guided: Boolean(record.guided),
+      hadError: Boolean(record.hadError),
+      submissions: (Array.isArray(record.submissions) ? record.submissions : []).slice(0, 3).map((submission: any) => ({
+        correct: Boolean(submission.correct),
+        choiceCode: String(submission.choiceCode ?? "").slice(0, 12),
+      })),
+    }];
+  }));
   return {
     lesson: Number(progress.lesson ?? 1),
     stageIndex: Math.max(0, Math.min(2, Number(progress.stageIndex ?? 0))),
@@ -90,7 +105,27 @@ function toStudentLiveState(progress: any, showHome: boolean): StudentLiveState 
     completedCount: Object.values(progress.records ?? {}).filter((record: any) => record?.completed).length,
     score: Math.max(0, Math.min(100, Number(progress.score ?? 0))),
     mode: progress.mode === "ar" ? "ar" : "non-ar",
+    responses,
   };
+}
+
+function normalizeNickname(value: string) {
+  return value.replace(/[^\p{L}\p{N} _-]/gu, "").replace(/\s+/g, " ").slice(0, 12);
+}
+
+function submissionChoiceCode(question: any, value: any) {
+  if (!Array.isArray(question.options) || !question.options.length) return "";
+  if (question.type === "sequence" && Array.isArray(value)) {
+    return value.map((item) => question.options.indexOf(item) + 1).filter((index) => index > 0).join(">");
+  }
+  if (question.type === "multiple_select" && Array.isArray(value)) {
+    return value.map((item) => question.options.indexOf(item) + 1).filter((index) => index > 0).sort((a, b) => a - b).join(",");
+  }
+  if (typeof value === "string") {
+    const index = question.options.indexOf(value);
+    return index >= 0 ? String(index + 1) : "";
+  }
+  return "";
 }
 
 function LiveClassNotice({ classCode, status }: { classCode: string; status: string }) {
@@ -874,14 +909,14 @@ export function AlphaApp() {
   }, []);
 
   useEffect(() => {
-    if (!hydrated || !classCode || showTeacher) return;
+    if (!hydrated || !classCode || showTeacher || normalizeNickname(progress.nickname ?? "").trim().length < 2) return;
     if (!liveClassConfigured) {
       setLiveClassStatus("실시간 연결 설정을 불러오지 못했습니다. 일반 모드로 계속할 수 있습니다.");
       return;
     }
     let cancelled = false;
     setLiveClassStatus("연결 중…");
-    joinStudentClass(classCode, Number(progressRef.current.lesson ?? selectedLesson), toStudentLiveState(progressRef.current, showHomeRef.current))
+    const connectTimer = window.setTimeout(() => joinStudentClass(classCode, Number(progressRef.current.lesson ?? selectedLesson), normalizeNickname(progressRef.current.nickname), toStudentLiveState(progressRef.current, showHomeRef.current))
       .then((handle) => {
         if (cancelled) {
           handle.leave().catch(() => undefined);
@@ -897,14 +932,15 @@ export function AlphaApp() {
         url.searchParams.delete("class");
         history.replaceState(null, "", `${url.pathname}${url.search ? url.search : ""}`);
         setClassCode("");
-      });
+      }), 400);
     return () => {
       cancelled = true;
+      window.clearTimeout(connectTimer);
       const handle = studentLiveRef.current;
       studentLiveRef.current = null;
       handle?.leave().catch(() => undefined);
     };
-  }, [classCode, hydrated, progress.lesson, selectedLesson, showTeacher]);
+  }, [classCode, hydrated, progress.lesson, progress.nickname, selectedLesson, showTeacher]);
 
   useEffect(() => {
     const handle = studentLiveRef.current;
@@ -999,6 +1035,7 @@ export function AlphaApp() {
       mode,
       phase: mode === "ar" ? "scan" : "observe",
       startedAt: Date.now(),
+      nickname: normalizeNickname(progress.nickname),
       settings: progress.settings,
     });
     setCameraError("");
@@ -1082,13 +1119,15 @@ export function AlphaApp() {
 
   const attemptQuestion = (value: any) => {
     const currentRecord = progress.records[question.id] ?? { attempts: 0, completed: false };
-    if (isAnswerCorrect(question, value)) {
+    const submission = { correct: isAnswerCorrect(question, value), choiceCode: submissionChoiceCode(question, value) };
+    const submissions = [...(currentRecord.submissions ?? []), submission].slice(0, 3);
+    if (submission.correct) {
       const earned = scoreForCorrectAttempt(currentRecord.attempts);
       mutate((current: any) => ({
         score: current.score + earned,
         records: {
           ...current.records,
-          [question.id]: { attempts: currentRecord.attempts + 1, completed: true, score: earned, guided: false, hadError: currentRecord.attempts > 0 },
+          [question.id]: { attempts: currentRecord.attempts + 1, completed: true, score: earned, guided: false, hadError: currentRecord.attempts > 0, submissions },
         },
       }));
       return;
@@ -1097,7 +1136,7 @@ export function AlphaApp() {
     mutate((current: any) => ({
       records: {
         ...current.records,
-        [question.id]: { ...currentRecord, attempts, completed: false, guidedAvailable: attempts >= 2, hadError: true },
+        [question.id]: { ...currentRecord, attempts, completed: false, guidedAvailable: attempts >= 2, hadError: true, submissions },
       },
     }));
   };
@@ -1137,7 +1176,8 @@ export function AlphaApp() {
 
   const exportAnonymousResult = () => {
     const payload = {
-      schema: "physgame-anonymous-result-v1",
+      schema: "physgame-anonymous-result-v2",
+      nickname: normalizeNickname(progress.nickname),
       lesson: lessonConfig.number,
       score: progress.score,
       mode: progress.mode,
@@ -1167,9 +1207,11 @@ export function AlphaApp() {
   if (showHome || !progress.started) {
     const selectedConfig = getLessonConfig(selectedLesson);
     const estimated = Math.ceil((expectedLessonSeconds(bank, selectedLesson) + 450) / 60);
+    const nicknameReady = normalizeNickname(progress.nickname ?? "").trim().length >= 2;
     const chooseLesson = (lessonNumber: number) => {
       setSelectedLesson(lessonNumber);
-      setProgress(mergeStoredProgress(localStorage.getItem(progressStorageKey(lessonNumber)), lessonNumber));
+      const nextProgress = mergeStoredProgress(localStorage.getItem(progressStorageKey(lessonNumber)), lessonNumber);
+      setProgress({ ...nextProgress, nickname: nextProgress.nickname || progress.nickname });
       history.replaceState(null, "", `?lesson=${lessonNumber}`);
     };
     return (
@@ -1189,6 +1231,12 @@ export function AlphaApp() {
 
         <section className="start-panel">
           <LiveClassNotice classCode={classCode} status={liveClassStatus} />
+          <label className="nickname-panel">
+            <strong>수업용 익명 닉네임</strong>
+            <span>실명·학번 대신 친구와 구별되는 2~12자 별칭을 입력하세요.</span>
+            <input aria-label="수업용 익명 닉네임" autoComplete="off" maxLength={12} placeholder="예: 별빛여우" value={progress.nickname ?? ""} onChange={(event) => mutate({ nickname: normalizeNickname(event.target.value) })} />
+            <small>{nicknameReady ? `교사용 화면에는 ‘${normalizeNickname(progress.nickname)}’(으)로 표시됩니다.` : "닉네임을 입력해야 활동을 시작할 수 있습니다."}</small>
+          </label>
           {!classCode && <div className="lesson-picker" aria-label="학습 차시 선택">
             {Object.values(LESSONS).map((item: any) => <button key={item.number} className={selectedLesson === item.number ? "active" : ""} onClick={() => chooseLesson(item.number)}><b>{item.number}차시</b><span>{item.title}</span></button>)}
           </div>}
@@ -1202,23 +1250,23 @@ export function AlphaApp() {
             <div className="resume-card">
               <span>이 기기의 {selectedLesson}차시 진행 기록이 있습니다</span>
               <strong>{stages[progress.stageIndex].name} · {progress.score}점</strong>
-              <button className="primary-button" onClick={resume}>이어하기</button>
+              <button className="primary-button" disabled={!nicknameReady} onClick={resume}>이어하기</button>
             </div>
           )}
           {progress.completed && (
             <div className="resume-card complete-resume">
-              <span>{selectedLesson}차시 완료 기록</span><strong>{progress.score}/100점</strong><button className="primary-button" onClick={resume}>결과 다시 보기</button>
+              <span>{selectedLesson}차시 완료 기록</span><strong>{progress.score}/100점</strong><button className="primary-button" disabled={!nicknameReady} onClick={resume}>결과 다시 보기</button>
             </div>
           )}
           {!progress.started && (
             <>
               <div className="privacy-note">
                 <span className="privacy-icon">◎</span>
-                <div><strong>카메라는 마커 인식에만 사용합니다</strong><p>실명·학번·사진·영상은 저장하거나 전송하지 않습니다. 수업 QR로 접속한 경우에만 익명 별칭·단계·점수가 교사용 진행판에 공유됩니다.</p></div>
+                <div><strong>카메라는 마커 인식에만 사용합니다</strong><p>실명·학번·사진·영상은 저장하거나 전송하지 않습니다. 수업 QR로 접속하면 위 익명 닉네임·단계·점수·문항별 선택 번호와 정오만 교사용 진행판에 공유됩니다.</p></div>
               </div>
               <div className="safety-note"><strong>안전</strong><span>카메라를 보며 걷지 않기 · 콘센트 접촉 및 충전기 분해 금지</span></div>
-              <button className="primary-button camera-button" onClick={() => start("ar")}><span>카메라로 시작</span><small>{selectedConfig.stages.flatMap((item: any) => item.markers).map((item: any) => item.number).join("·")} 마커를 단계별 인식</small></button>
-              <button className="secondary-button" onClick={() => start("fallback")}><span>카메라 없이 시작</span><small>같은 관찰·조작·10문항 진행</small></button>
+              <button className="primary-button camera-button" disabled={!nicknameReady} onClick={() => start("ar")}><span>카메라로 시작</span><small>{selectedConfig.stages.flatMap((item: any) => item.markers).map((item: any) => item.number).join("·")} 마커를 단계별 인식</small></button>
+              <button className="secondary-button" disabled={!nicknameReady} onClick={() => start("fallback")}><span>카메라 없이 시작</span><small>같은 관찰·조작·10문항 진행</small></button>
             </>
           )}
           {(progress.started || progress.completed) && <button className="text-button danger-text" onClick={reset}>이 기기의 진행 기록 지우기</button>}

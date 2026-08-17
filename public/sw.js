@@ -1,4 +1,4 @@
-const CACHE_NAME = "physgame-three-lessons-v4-quiz-v2";
+const CACHE_NAME = "physgame-three-lessons-v5-live-answer-trace";
 const scopedAsset = (path) => new URL(path, self.registration.scope).toString();
 const CORE_ASSETS = [
   "data/quiz_bank_v1.json",

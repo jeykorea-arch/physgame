@@ -1,0 +1,31 @@
+{
+  "schema": "physgame-anonymous-result-v2",
+  "nickname": "별빛여우",
+  "lesson": 1,
+  "score": 17,
+  "mode": "fallback",
+  "durationMinutes": 3,
+  "records": {
+    "L1-Q01": {
+      "attempts": 2,
+      "completed": true,
+      "score": 7,
+      "guided": false,
+      "hadError": true,
+      "submissions": [
+        { "correct": false, "choiceCode": "2" },
+        { "correct": true, "choiceCode": "1" }
+      ]
+    },
+    "L1-Q02": {
+      "attempts": 1,
+      "completed": true,
+      "score": 10,
+      "guided": false,
+      "hadError": false,
+      "submissions": [
+        { "correct": true, "choiceCode": "2" }
+      ]
+    }
+  }
+}

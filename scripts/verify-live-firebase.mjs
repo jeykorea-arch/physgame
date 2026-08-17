@@ -45,7 +45,7 @@ try {
 
   console.log("4/7 학생 익명 상태 등록");
   await within(set(ref(studentDb, `classes/${classCode}/students/${student.uid}`), {
-    alias: `학생-${student.uid.slice(-6).toUpperCase()}`,
+    alias: "별빛여우",
     connected: true,
     lesson: 1,
     stageIndex: 0,
@@ -68,17 +68,33 @@ try {
     questionIndex: 3,
     completedCount: 3,
     score: 27,
+    responses: {
+      "L1-Q01": {
+        attempts: 2,
+        completed: true,
+        score: 7,
+        guided: false,
+        hadError: true,
+        submissions: [
+          { correct: false, choiceCode: "2" },
+          { correct: true, choiceCode: "1" },
+        ],
+      },
+    },
     lastSeen: Date.now(),
   }), "학생 진행 갱신");
   const updated = (await within(get(ref(teacherDb, `classes/${classCode}/students/${student.uid}`)), "교사 갱신 확인")).val();
   assert.equal(updated.completedCount, 3);
   assert.equal(updated.score, 27);
+  assert.equal(updated.alias, "별빛여우");
+  assert.equal(updated.responses["L1-Q01"].submissions[0].choiceCode, "2");
+  assert.equal(updated.responses["L1-Q01"].submissions[1].correct, true);
 
   console.log("7/7 수업 종료·접속 해제");
   await within(update(ref(teacherDb, `classes/${classCode}/public`), { active: false }), "수업 종료");
   await within(update(ref(studentDb, `classes/${classCode}/students/${student.uid}`), { connected: false, lastSeen: Date.now() }), "학생 접속 해제");
 
-  console.log("Firebase 실시간 왕복 검증 통과: 교사 개설 → 학생 익명 접속 → 진행 갱신 → 종료");
+  console.log("Firebase 실시간 왕복 검증 통과: 교사 개설 → 익명 닉네임 접속 → 문항별 선택 번호·정오 갱신 → 종료");
 } catch (error) {
   failure = error;
 } finally {
