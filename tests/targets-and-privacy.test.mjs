@@ -43,7 +43,7 @@ test("앱은 카메라 프레임 저장·업로드 API를 포함하지 않는다
   const source = await readFile(new URL("app/AlphaApp.tsx", appRoot), "utf8");
   assert.doesNotMatch(source, /toDataURL|MediaRecorder|ImageCapture|FormData|WebSocket|sendBeacon/);
   const fetches = [...source.matchAll(/fetch\(([^)]+)\)/g)].map((match) => match[1]);
-  assert.deepEqual(fetches, ['publicAsset("data/quiz_bank_v1.json"']);
+  assert.deepEqual(fetches, ["publicAsset(`data/quiz_bank_v1.json?v=${CONTENT_VERSION}`"]);
   assert.match(source, /getTracks\(\)\.forEach\(\(track\) => track\.stop\(\)\)/);
 });
 
@@ -52,6 +52,7 @@ test("GitHub Pages 하위 경로에서도 모든 런타임 자산을 현재 문�
   const serviceWorker = await readFile(new URL("public/sw.js", appRoot), "utf8");
   const manifest = JSON.parse(await readFile(new URL("public/manifest.webmanifest", appRoot), "utf8"));
   assert.match(source, /new URL\(relativePath, document\.baseURI\)/);
+  assert.match(source, /data\/quiz_bank_v1\.json\?v=\$\{CONTENT_VERSION\}/);
   assert.doesNotMatch(source, /(?:fetch|loadScript|register)\("\//);
   assert.match(serviceWorker, /self\.registration\.scope/);
   assert.match(serviceWorker, /physgame-three-lessons-v4-quiz-v2/);

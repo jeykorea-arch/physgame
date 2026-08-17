@@ -863,7 +863,7 @@ export function AlphaApp() {
       setProgress(isQaRun ? makeInitialProgress(requestedLesson) : mergeStoredProgress(localStorage.getItem(progressStorageKey(requestedLesson)), requestedLesson));
     }
     setHydrated(true);
-    fetch(publicAsset("data/quiz_bank_v1.json"))
+    fetch(publicAsset(`data/quiz_bank_v1.json?v=${CONTENT_VERSION}`))
       .then((response) => {
         if (!response.ok) throw new Error("퀴즈 데이터를 불러오지 못했습니다.");
         return response.json();
