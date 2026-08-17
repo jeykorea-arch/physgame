@@ -459,77 +459,170 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
         const outputCurrent = Math.abs(inputCurrent);
         const nearZero = Math.abs(inputCurrent) < 0.05;
         const positiveDirection = inputCurrent > 0;
-        const graphLeft = 16;
+        const graphLeft = 18;
         const graphWidth = width - graphLeft * 2;
-        const referenceX = graphLeft + graphWidth / 2;
-        const drawCurrentGraph = (top: number, graphHeight: number, sample: (phase: number) => number, color: string, oneSided: boolean) => {
-          const baseline = oneSided ? top + graphHeight - 5 : top + graphHeight / 2;
-          const amplitude = oneSided ? graphHeight - 12 : graphHeight * 0.42;
-          ctx.strokeStyle = "#304656";
-          ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(graphLeft, baseline); ctx.lineTo(graphLeft + graphWidth, baseline); ctx.stroke();
+        const graphTop = 54;
+        const graphHeight = 62;
+        const graphBaseline = graphTop + graphHeight / 2;
+        const currentX = graphLeft + (Math.max(0, Math.min(360, value)) / 360) * graphWidth;
+        const currentY = graphBaseline - inputCurrent * graphHeight * 0.42;
+        const circuitTop = 218;
+        const circuitMiddle = 282;
+        const circuitBottom = 346;
+        const bridgeCenterX = width * 0.49;
+        const bridgeHalfWidth = Math.min(50, width * 0.18);
+        const leftNode = { x: bridgeCenterX - bridgeHalfWidth, y: circuitMiddle };
+        const rightNode = { x: bridgeCenterX + bridgeHalfWidth, y: circuitMiddle };
+        const topNode = { x: bridgeCenterX, y: circuitTop };
+        const bottomNode = { x: bridgeCenterX, y: circuitBottom };
+        const sourceY = 410;
+        const sourceRadius = 19;
+        const loadX = width - 27;
+        const activeColor = nearZero ? muted : yellow;
+
+        const drawLine = (points: Array<{ x: number; y: number }>, color = "#435765", lineWidth = 2) => {
           ctx.strokeStyle = color;
-          ctx.lineWidth = 2.5;
+          ctx.lineWidth = lineWidth;
           ctx.beginPath();
-          for (let x = 0; x <= graphWidth; x += 2) {
-            const phase = ((x / graphWidth) * Math.PI * 4) - Math.PI * 2;
-            const current = sample(phase);
-            const y = baseline - current * amplitude;
-            if (x === 0) ctx.moveTo(graphLeft + x, y);
-            else ctx.lineTo(graphLeft + x, y);
-          }
+          points.forEach((point, index) => index === 0 ? ctx.moveTo(point.x, point.y) : ctx.lineTo(point.x, point.y));
           ctx.stroke();
-          const currentValue = sample(0);
-          const pointY = baseline - currentValue * amplitude;
-          ctx.strokeStyle = ink;
-          ctx.setLineDash([4, 4]);
-          ctx.beginPath(); ctx.moveTo(referenceX, top - 2); ctx.lineTo(referenceX, top + graphHeight + 2); ctx.stroke();
-          ctx.setLineDash([]);
+        };
+        const drawNode = (point: { x: number; y: number }, color = ink) => {
           ctx.fillStyle = color;
-          ctx.beginPath(); ctx.arc(referenceX, pointY, 5, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(point.x, point.y, 3.5, 0, Math.PI * 2); ctx.fill();
+        };
+        const drawDiode = (from: { x: number; y: number }, to: { x: number; y: number }, label: string, active: boolean, labelSide: number) => {
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const length = Math.hypot(dx, dy);
+          const angle = Math.atan2(dy, dx);
+          const color = active ? yellow : "#738390";
+          ctx.save();
+          ctx.translate(from.x, from.y);
+          ctx.rotate(angle);
+          ctx.strokeStyle = color;
+          ctx.fillStyle = color;
+          ctx.lineWidth = active ? 3 : 2;
+          ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(length * 0.38, 0); ctx.moveTo(length * 0.62, 0); ctx.lineTo(length, 0); ctx.stroke();
+          const center = length / 2;
+          ctx.beginPath(); ctx.moveTo(center - 9, -8); ctx.lineTo(center - 9, 8); ctx.lineTo(center + 5, 0); ctx.closePath(); ctx.fill();
+          ctx.beginPath(); ctx.moveTo(center + 7, -9); ctx.lineTo(center + 7, 9); ctx.stroke();
+          ctx.restore();
+          const midpointX = (from.x + to.x) / 2;
+          const midpointY = (from.y + to.y) / 2;
+          ctx.fillStyle = color;
+          ctx.font = "800 10px system-ui, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(label, midpointX + (-dy / length) * 15 * labelSide, midpointY + (dx / length) * 15 * labelSide + 3);
+          ctx.textAlign = "start";
         };
 
         ctx.fillStyle = ink;
         ctx.font = "800 12px system-ui, sans-serif";
-        ctx.fillText("입력 전류: 방향이 주기적으로 바뀜", 14, 18);
-        ctx.fillStyle = cyan;
-        ctx.font = "700 11px system-ui, sans-serif";
-        ctx.fillText(`현재 ${inputCurrent.toFixed(2)} A · ${nearZero ? "0" : positiveDirection ? "+방향" : "−방향"}`, 14, 37);
-        drawCurrentGraph(46, 66, (phase) => Math.sin(phase + theta), cyan, false);
-        if (nearZero) {
-          ctx.fillStyle = muted;
-          ctx.fillText("입력 화살표: 전류 0", 14, 132);
-        } else {
-          arrow(positiveDirection ? 22 : width - 22, 126, positiveDirection ? width - 22 : 22, 126, cyan);
-          ctx.fillStyle = cyan;
-          ctx.fillText(positiveDirection ? "입력 +방향 →" : "← 입력 −방향", 14, 145);
+        ctx.fillText("입력 교류의 한 주기와 현재 순간 θ", 14, 19);
+        ctx.fillStyle = muted;
+        ctx.font = "650 10px system-ui, sans-serif";
+        ctx.fillText("θ: 한 주기(0°~360°)에서 현재 위치", 14, 37);
+        ctx.strokeStyle = "#304656";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(graphLeft, graphBaseline); ctx.lineTo(graphLeft + graphWidth, graphBaseline); ctx.stroke();
+        ctx.strokeStyle = cyan;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        for (let x = 0; x <= graphWidth; x += 2) {
+          const phase = (x / graphWidth) * Math.PI * 2;
+          const y = graphBaseline - Math.sin(phase) * graphHeight * 0.42;
+          if (x === 0) ctx.moveTo(graphLeft + x, y); else ctx.lineTo(graphLeft + x, y);
         }
+        ctx.stroke();
+        ctx.strokeStyle = ink;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(currentX, graphTop - 4); ctx.lineTo(currentX, graphTop + graphHeight + 3); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = cyan;
+        ctx.beginPath(); ctx.arc(currentX, currentY, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.font = "650 8px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        [0, 90, 180, 270, 360].forEach((degree) => ctx.fillText(`${degree}°`, graphLeft + (degree / 360) * graphWidth, 128));
+        ctx.textAlign = "start";
+        ctx.fillStyle = nearZero ? muted : cyan;
+        ctx.font = "750 10px system-ui, sans-serif";
+        ctx.fillText(`θ=${value}° · 입력 ${inputCurrent.toFixed(2)} A · ${nearZero ? "순간적으로 0" : positiveDirection ? "A→B" : "B→A"}`, 14, 149);
 
+        ctx.strokeStyle = "#304656";
+        ctx.beginPath(); ctx.moveTo(14, 163); ctx.lineTo(width - 14, 163); ctx.stroke();
         ctx.fillStyle = ink;
         ctx.font = "800 12px system-ui, sans-serif";
-        ctx.fillText("출력 전류: 한 방향으로 흐름", 14, 172);
-        ctx.fillStyle = yellow;
-        ctx.font = "700 11px system-ui, sans-serif";
-        ctx.fillText(`현재 ${outputCurrent.toFixed(2)} A · +방향`, 14, 191);
-        drawCurrentGraph(199, 66, (phase) => Math.abs(Math.sin(phase + theta)), yellow, true);
-        arrow(22, 279, width - 22, 279, yellow);
-        ctx.fillStyle = yellow;
-        ctx.fillText("출력 +방향 → (항상 같음)", 14, 298);
-
-        const cx = width / 2;
-        const cy = 350;
-        const size = Math.min(46, width * 0.15);
-        ctx.strokeStyle = ink; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.moveTo(cx, cy - size); ctx.lineTo(cx + size, cy); ctx.lineTo(cx, cy + size); ctx.lineTo(cx - size, cy); ctx.closePath(); ctx.stroke();
-        ctx.fillStyle = !nearZero && positiveDirection ? yellow : muted;
-        ctx.fillText("D1", cx - size + 7, cy - 16); ctx.fillText("D4", cx + 14, cy + 25);
-        ctx.fillStyle = !nearZero && !positiveDirection ? yellow : muted;
-        ctx.fillText("D2", cx + 14, cy - 16); ctx.fillText("D3", cx - size + 7, cy + 25);
+        ctx.fillText("실제 회로에서 현재 전류가 지나는 길", 14, 183);
         ctx.fillStyle = nearZero ? muted : yellow;
-        ctx.font = "800 11px system-ui, sans-serif";
-        const pathLabel = nearZero ? "전류가 0이 되는 순간" : positiveDirection ? "전류가 지나는 길: D1 · D4" : "전류가 지나는 길: D2 · D3";
-        const labelWidth = ctx.measureText(pathLabel).width;
-        ctx.fillText(pathLabel, Math.max(12, (width - labelWidth) / 2), height - 12);
+        ctx.font = "700 10px system-ui, sans-serif";
+        ctx.fillText(`전류계: ${outputCurrent.toFixed(2)} A · 부하에서는 항상 위→아래`, 14, 201);
+
+        const sourceLeft = { x: bridgeCenterX - sourceRadius, y: sourceY };
+        const sourceRight = { x: bridgeCenterX + sourceRadius, y: sourceY };
+        const leftInputRoute = [leftNode, { x: leftNode.x, y: sourceY }, sourceLeft];
+        const rightInputRoute = [rightNode, { x: rightNode.x, y: sourceY }, sourceRight];
+        const outputTopRoute = [topNode, { x: loadX, y: circuitTop }, { x: loadX, y: 241 }];
+        const outputBottomRoute = [{ x: loadX, y: 332 }, { x: loadX, y: circuitBottom }, bottomNode];
+
+        drawLine(leftInputRoute); drawLine(rightInputRoute); drawLine(outputTopRoute); drawLine(outputBottomRoute);
+        if (!nearZero) {
+          const startRoute = positiveDirection ? [sourceLeft, { x: leftNode.x, y: sourceY }, leftNode] : [sourceRight, { x: rightNode.x, y: sourceY }, rightNode];
+          const returnRoute = positiveDirection ? [rightNode, { x: rightNode.x, y: sourceY }, sourceRight] : [leftNode, { x: leftNode.x, y: sourceY }, sourceLeft];
+          drawLine(startRoute, yellow, 4); drawLine([positiveDirection ? leftNode : rightNode, topNode], yellow, 4);
+          drawLine([topNode, { x: loadX, y: circuitTop }, { x: loadX, y: 241 }], yellow, 4);
+          drawLine([{ x: loadX, y: 279 }, { x: loadX, y: 293 }], yellow, 4);
+          drawLine([{ x: loadX, y: 332 }, { x: loadX, y: circuitBottom }, bottomNode], yellow, 4);
+          drawLine([bottomNode, positiveDirection ? rightNode : leftNode], yellow, 4); drawLine(returnRoute, yellow, 4);
+        }
+
+        drawDiode(leftNode, topNode, "D1", !nearZero && positiveDirection, -1);
+        drawDiode(rightNode, topNode, "D2", !nearZero && !positiveDirection, 1);
+        drawDiode(bottomNode, leftNode, "D3", !nearZero && !positiveDirection, -1);
+        drawDiode(bottomNode, rightNode, "D4", !nearZero && positiveDirection, 1);
+        [leftNode, rightNode, topNode, bottomNode].forEach((node) => drawNode(node, nearZero ? muted : ink));
+
+        ctx.strokeStyle = activeColor;
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(loadX, 260, 18, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = activeColor;
+        ctx.font = "900 15px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.fillText("A", loadX, 265); ctx.textAlign = "start";
+        ctx.strokeStyle = activeColor;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(loadX, 293); ctx.lineTo(loadX - 7, 299); ctx.lineTo(loadX + 7, 305); ctx.lineTo(loadX - 7, 311); ctx.lineTo(loadX + 7, 317); ctx.lineTo(loadX - 7, 323); ctx.lineTo(loadX, 332); ctx.stroke();
+        ctx.fillStyle = yellow;
+        ctx.font = "900 11px system-ui, sans-serif";
+        ctx.fillText("+", loadX - 14, 224); ctx.fillText("−", loadX - 14, 349);
+        ctx.fillStyle = muted;
+        ctx.font = "700 9px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.fillText("전류계", loadX, 286); ctx.fillText("부하 R", loadX - 16, 326); ctx.textAlign = "start";
+        if (!nearZero) arrow(loadX - 19, 241, loadX - 19, 324, yellow);
+
+        ctx.strokeStyle = muted;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(bridgeCenterX, sourceY, sourceRadius, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = cyan;
+        ctx.font = "900 18px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.fillText("~", bridgeCenterX, sourceY + 6); ctx.textAlign = "start";
+        ctx.fillStyle = muted;
+        ctx.font = "700 9px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.fillText("교류 입력", bridgeCenterX, 440); ctx.textAlign = "start";
+        if (!nearZero) {
+          const start = positiveDirection ? sourceLeft : sourceRight;
+          ctx.fillStyle = yellow;
+          ctx.beginPath(); ctx.arc(start.x, start.y, 5, 0, Math.PI * 2); ctx.fill();
+          ctx.font = "800 9px system-ui, sans-serif";
+          ctx.fillText(positiveDirection ? "A 시작" : "B 시작", positiveDirection ? Math.max(8, start.x - 31) : start.x + 5, sourceY - 8);
+        }
+
+        ctx.fillStyle = nearZero ? muted : yellow;
+        ctx.font = "800 10px system-ui, sans-serif";
+        const firstPathLine = nearZero ? `θ=${value}°: 입력과 출력 전류가 순간적으로 0 A` : positiveDirection ? "현재 길: 입력 A → D1 → 전류계·부하 ↓" : "현재 길: 입력 B → D2 → 전류계·부하 ↓";
+        const secondPathLine = nearZero ? "슬라이더를 옮겨 전류 길을 확인하세요." : positiveDirection ? "→ D4 → 입력 B (출력 방향은 항상 같음)" : "→ D3 → 입력 A (출력 방향은 항상 같음)";
+        ctx.fillText(firstPathLine, 14, height - 32);
+        ctx.fillText(secondPathLine, 14, height - 15);
       } else if (visualType === "smoothing") {
         const ripple = Math.max(0.08, Math.min(0.7, 260 / value));
         ctx.fillStyle = ink; ctx.font = "700 11px system-ui, sans-serif";

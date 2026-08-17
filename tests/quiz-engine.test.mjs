@@ -66,15 +66,24 @@ test("학생 문항과 학생 화면에는 지정된 어려운 전자공학 표�
   forbidden.forEach((term) => assert.doesNotMatch(studentSources, new RegExp(term), term));
 });
 
-test("다이오드 그래프·화살표·다이오드 짝은 같은 입력 변화 단계에 연동된다", async () => {
+test("다이오드 화면은 위상각·전기 기호·전류계·두 전류 길을 함께 보여 준다", async () => {
   const source = await readFile(new URL("../app/AlphaApp.tsx", import.meta.url), "utf8");
+  const configSource = await readFile(new URL("../lib/lesson-config.js", import.meta.url), "utf8");
   assert.match(source, /const theta = \(value \* Math\.PI\) \/ 180/);
-  assert.match(source, /Math\.sin\(phase \+ theta\)/);
-  assert.match(source, /Math\.abs\(Math\.sin\(phase \+ theta\)\)/);
-  assert.match(source, /positiveDirection \? width - 22 : 22/);
-  assert.match(source, /arrow\(22, 279, width - 22, 279, yellow\)/);
-  assert.match(source, /positiveDirection \? "전류가 지나는 길: D1 · D4" : "전류가 지나는 길: D2 · D3"/);
-  assert.match(source, /nearZero \? "전류가 0이 되는 순간"/);
+  assert.match(source, /currentX = graphLeft \+ \(Math\.max\(0, Math\.min\(360, value\)\) \/ 360\) \* graphWidth/);
+  assert.match(source, /Math\.sin\(phase\) \* graphHeight/);
+  assert.match(source, /const drawDiode =/);
+  assert.match(source, /drawDiode\(leftNode, topNode, "D1"/);
+  assert.match(source, /drawDiode\(rightNode, topNode, "D2"/);
+  assert.match(source, /drawDiode\(bottomNode, leftNode, "D3"/);
+  assert.match(source, /drawDiode\(bottomNode, rightNode, "D4"/);
+  assert.match(source, /ctx\.fillText\("A", loadX, 265\)/);
+  assert.match(source, /입력 A → D1 → 전류계·부하 ↓/);
+  assert.match(source, /입력 B → D2 → 전류계·부하 ↓/);
+  assert.match(source, /D4 → 입력 B/);
+  assert.match(source, /D3 → 입력 A/);
+  assert.match(configSource, /교류 한 주기 속 현재 각도 θ/);
+  assert.match(configSource, /θ\(위상각\)는 교류 한 주기 0°~360°/);
 });
 
 test("콘텐츠 v2는 이전 저장 상태를 섞지 않고 새 문항으로 시작한다", async () => {
