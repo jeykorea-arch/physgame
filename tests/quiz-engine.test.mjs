@@ -66,10 +66,25 @@ test("학생 문항과 학생 화면에는 지정된 어려운 전자공학 표�
   forbidden.forEach((term) => assert.doesNotMatch(studentSources, new RegExp(term), term));
 });
 
+test("과학 감사 대상 문항은 에너지·자기 선속·축전기·전압 그래프를 같은 물리량으로 설명한다", () => {
+  const byId = Object.fromEntries(bank.questions.map((question) => [question.id, question]));
+  assert.match(byId["L1-Q01"].feedback_correct, /역학적 에너지가 전기 에너지로 전환/);
+  assert.ok(byId["L1-Q10"].answer.every((answer) => !answer.includes("자기장") || answer.includes("자기 선속")));
+  assert.match(byId["L2-Q15"].prompt, /끊어져 전류가 흐르지 않을 때/);
+  assert.match(byId["L2-Q16"].answer[0], /정류된 입력 전압이 축전기 전압보다 높아질 때/);
+  assert.match(byId["L2-Q16"].answer[1], /부하로 내보낸다/);
+  assert.match(byId["L2-Q17"].feedback_correct, /ΔV≈ΔQ\/C/);
+  assert.match(byId["L3-Q26"].answer, /교류 입력을 한쪽 극성이 유지되는 직류 출력/);
+  assert.match(byId["L3-Q28"].answer[0], /역학적 에너지가 발전기에서 전기 에너지로 전환/);
+  assert.match(byId["L3-Q29"].prompt, /각 지점의 전압을 같은 기준/);
+  assert.doesNotMatch(byId["L3-Q29"].prompt, /전류 또는 전압/);
+  assert.doesNotMatch(byId["L3-Q30"].answer, /발전소에서 만든 전기/);
+});
+
 test("다이오드 화면은 위상각·전기 기호·전류계·두 전류 길을 함께 보여 준다", async () => {
   const source = await readFile(new URL("../app/AlphaApp.tsx", import.meta.url), "utf8");
   const configSource = await readFile(new URL("../lib/lesson-config.js", import.meta.url), "utf8");
-  assert.match(source, /const theta = \(value \* Math\.PI\) \/ 180/);
+  assert.match(source, /rectifierCurrents\(value\)/);
   assert.match(source, /currentX = graphLeft \+ \(Math\.max\(0, Math\.min\(360, value\)\) \/ 360\) \* graphWidth/);
   assert.match(source, /Math\.sin\(phase\) \* graphHeight/);
   assert.match(source, /const drawDiode =/);
@@ -86,9 +101,9 @@ test("다이오드 화면은 위상각·전기 기호·전류계·두 전류 길
   assert.match(configSource, /θ\(위상각\)는 교류 한 주기 0°~360°/);
 });
 
-test("콘텐츠 v2는 이전 저장 상태를 섞지 않고 새 문항으로 시작한다", async () => {
+test("과학 정확성 보강 콘텐츠는 이전 저장 상태를 섞지 않고 새 문항으로 시작한다", async () => {
   const source = await readFile(new URL("../app/AlphaApp.tsx", import.meta.url), "utf8");
-  assert.match(source, /CONTENT_VERSION = "quiz-v2-highschool-2026-08-13"/);
+  assert.match(source, /CONTENT_VERSION = "quiz-v3-science-audit-2026-08-17"/);
   assert.match(source, /APP_VERSION = 2/);
   assert.match(source, /parsed\.contentVersion !== CONTENT_VERSION/);
   assert.match(source, /physgame\.lesson\$\{lesson\}\.v2/);

@@ -13,10 +13,18 @@ import {
   shuffledSequence,
 } from "../lib/quiz-engine.js";
 import { getDefaultSliders, getLessonConfig, LESSONS } from "../lib/lesson-config.js";
+import {
+  capacitorOutputVoltage,
+  capacitorRippleFraction,
+  rectifierCurrents,
+  switchingRelativeTransfer,
+  transformerSecondaryVoltage,
+  transmissionMetrics,
+} from "../lib/science-models.js";
 import { joinStudentClass, liveClassConfigured, type StudentClassHandle, type StudentLiveState } from "./firebase-live";
 import { TeacherDashboard } from "./TeacherDashboard";
 
-const CONTENT_VERSION = "quiz-v2-highschool-2026-08-13";
+const CONTENT_VERSION = "quiz-v3-science-audit-2026-08-17";
 const STORAGE_KEY = "physgame.lesson1.alpha.v2";
 const APP_VERSION = 2;
 const AR_PREVIEW_SECONDS = 5;
@@ -344,6 +352,14 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
         ctx.fill();
       };
 
+      const drawPath = (points: Array<{ x: number; y: number }>, color = "#435765", lineWidth = 2) => {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = lineWidth;
+        ctx.beginPath();
+        points.forEach((point, index) => index === 0 ? ctx.moveTo(point.x, point.y) : ctx.lineTo(point.x, point.y));
+        ctx.stroke();
+      };
+
       const plotWave = (left: number, top: number, plotWidth: number, plotHeight: number, sample: (phase: number) => number, color = cyan) => {
         ctx.strokeStyle = color;
         ctx.lineWidth = 2.5;
@@ -359,38 +375,38 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
 
       if (visualType === "generator") {
         const speed = value / 100;
-        ctx.strokeStyle = yellow;
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.arc(width * 0.24, 92, 42, 0, Math.PI * 2);
-        ctx.stroke();
-        for (let i = 0; i < 6; i += 1) {
-          const angle = (i * Math.PI) / 3 + speed * 0.7;
-          ctx.beginPath();
-          ctx.moveTo(width * 0.24, 92);
-          ctx.lineTo(width * 0.24 + Math.cos(angle) * 38, 92 + Math.sin(angle) * 38);
-          ctx.stroke();
-        }
-        arrow(width * 0.38, 92, width * 0.52, 92);
-        ctx.strokeStyle = cyan;
-        ctx.lineWidth = 3;
-        for (let i = 0; i < 7; i += 1) {
-          ctx.beginPath();
-          ctx.arc(width * 0.66 + i * 4, 92, 28, -Math.PI / 2, Math.PI / 2);
-          ctx.stroke();
-        }
-        arrow(width * 0.78, 92, width * 0.91, 92, speed > 0 ? yellow : muted);
+        const turbineX = width * 0.2;
+        const rotorX = width * 0.72;
+        const rotorY = 92;
         ctx.fillStyle = ink;
-        ctx.fillText("터빈·회전자", Math.max(12, width * 0.12), 158);
-        ctx.fillText("코일·자기 선속", width * 0.53, 158);
-        ctx.fillStyle = muted;
-        ctx.font = "600 12px system-ui, sans-serif";
-        ctx.fillText(`변화율 ${Math.round(value)}%`, width * 0.57, 181);
-        ctx.fillStyle = speed > 0 ? yellow : muted;
-        ctx.fillText(speed > 0 ? "유도 전압 발생" : "유도 전압 0", width * 0.65, 207);
+        ctx.font = "800 12px system-ui, sans-serif";
+        ctx.fillText("터빈의 운동 → 자석과 코일의 상대 운동", 14, 20);
+        ctx.strokeStyle = yellow;
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(turbineX, 88, 29, 0, Math.PI * 2); ctx.stroke();
+        for (let i = 0; i < 6; i += 1) {
+          const angle = (i * Math.PI) / 3 + speed * Math.PI * 0.8;
+          ctx.beginPath();
+          ctx.moveTo(turbineX, 88);
+          ctx.lineTo(turbineX + Math.cos(angle) * 25, 88 + Math.sin(angle) * 25);
+          ctx.stroke();
+        }
+        arrow(turbineX + 34, 88, rotorX - 44, 88, speed > 0 ? yellow : muted);
+        ctx.fillStyle = "#173748"; ctx.fillRect(rotorX - 42, 45, 30, 27); ctx.fillRect(rotorX + 12, 109, 30, 27);
+        ctx.fillStyle = cyan; ctx.font = "900 13px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.fillText("N", rotorX - 27, 63); ctx.fillText("S", rotorX + 27, 127); ctx.textAlign = "start";
+        ctx.strokeStyle = cyan; ctx.lineWidth = 1.5;
+        for (let i = -1; i <= 1; i += 1) arrow(rotorX - 23 + i * 12, 76, rotorX + 23 + i * 12, 104, cyan);
+        ctx.save(); ctx.translate(rotorX, rotorY); ctx.rotate(speed * Math.PI * 0.8);
+        ctx.strokeStyle = speed > 0 ? yellow : muted; ctx.lineWidth = 3; ctx.strokeRect(-18, -28, 36, 56); ctx.restore();
+        ctx.fillStyle = muted; ctx.font = "650 9px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.fillText("터빈", turbineX, 132); ctx.fillText("자석·회전 코일", rotorX, 150); ctx.textAlign = "start";
+        ctx.strokeStyle = "#304656"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(14, 171); ctx.lineTo(width - 14, 171); ctx.stroke();
+        plotWave(16, 180, width - 32, 56, (phase) => Math.sin(phase) * speed, speed > 0 ? yellow : muted);
+        ctx.fillStyle = speed > 0 ? yellow : muted; ctx.font = "750 10px system-ui, sans-serif";
+        ctx.fillText(speed > 0 ? `유도 전압의 상대 크기 ${value}%` : "회전 정지 → 자기 선속 변화 0 → 유도 전압 0", 14, height - 13);
       } else if (visualType === "transmission" || visualType === "gridDiagnosis") {
-        const current = 1000 / value;
-        const loss = current * current;
+        const { current, lineLoss: loss } = transmissionMetrics(value);
         ctx.fillStyle = ink;
         ctx.fillText("발전소", 14, 34);
         ctx.fillText("도시", width - 48, 34);
@@ -401,8 +417,9 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
         ctx.lineTo(width - 28, 72);
         ctx.stroke();
         arrow(42, 72, width - 42, 72, yellow);
-        const currentHeight = Math.min(85, current * 8);
-        const lossHeight = Math.min(85, loss * 0.8);
+        const chartHeight = Math.max(60, height - 150);
+        const currentHeight = chartHeight * (current / 10);
+        const lossHeight = chartHeight * (loss / 100);
         ctx.fillStyle = cyan;
         const chartBase = height - 66;
         ctx.fillRect(width * 0.28 - 22, chartBase - currentHeight, 44, currentHeight);
@@ -412,9 +429,9 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
         ctx.fillText(`I = ${current.toFixed(1)} A`, width * 0.16, height - 41);
         ctx.fillText(`손실 = ${loss.toFixed(1)} W`, width * 0.52, height - 41);
         ctx.fillStyle = muted;
-        ctx.font = "600 12px system-ui, sans-serif";
-        ctx.fillText("P=VI", width * 0.24, height - 17);
-        ctx.fillText("P손실=I²R", width * 0.61, height - 17);
+        ctx.font = "600 10px system-ui, sans-serif";
+        ctx.fillText("전류 눈금 0~10 A", Math.max(8, width * 0.12), height - 17);
+        ctx.fillText("손실 눈금 0~100 W", Math.max(8, width * 0.53), height - 17);
         if (visualType === "gridDiagnosis") {
           ctx.fillStyle = muted;
           ctx.font = "700 11px system-ui, sans-serif";
@@ -422,7 +439,7 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
           ctx.fillText("선로 강하 ΔV=IR", Math.max(14, width - 122), 105);
         }
       } else if (visualType === "transformer") {
-        const secondaryVoltage = (2200 * value) / 1000;
+        const secondaryVoltage = transformerSecondaryVoltage(2200, 1000, value);
         const labelTop = height - 48;
         const labelBottom = height - 19;
         const coreTop = 28;
@@ -439,7 +456,7 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
           ctx.stroke();
         }
         ctx.strokeStyle = yellow;
-        const turnsShown = Math.max(2, Math.round(value / 70));
+        const turnsShown = Math.max(1, Math.round(8 * value / 1000));
         for (let i = 0; i < turnsShown; i += 1) {
           ctx.beginPath();
           ctx.arc(width * 0.68, coreTop + 26 + i * ((coreHeight - 52) / Math.max(1, turnsShown - 1)), 18, Math.PI / 2, -Math.PI / 2);
@@ -454,9 +471,7 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
         ctx.fillStyle = yellow;
         ctx.fillText(`V₂=${secondaryVoltage.toFixed(0)} V~`, width * 0.62, labelBottom);
       } else if (visualType === "rectifier") {
-        const theta = (value * Math.PI) / 180;
-        const inputCurrent = Math.sin(theta);
-        const outputCurrent = Math.abs(inputCurrent);
+        const { inputCurrent, outputCurrent } = rectifierCurrents(value);
         const nearZero = Math.abs(inputCurrent) < 0.05;
         const positiveDirection = inputCurrent > 0;
         const graphLeft = 18;
@@ -624,71 +639,162 @@ function ScienceCanvas({ visualType, stageName, value, reducedMotion }: any) {
         ctx.fillText(firstPathLine, 14, height - 32);
         ctx.fillText(secondPathLine, 14, height - 15);
       } else if (visualType === "smoothing") {
-        const ripple = Math.max(0.08, Math.min(0.7, 260 / value));
-        ctx.fillStyle = ink; ctx.font = "700 11px system-ui, sans-serif";
-        ctx.fillText("한 방향 전류", 14, 20); ctx.fillText("크기가 변함", 14, 36);
-        ctx.fillText("축전기를 지난 뒤", Math.max(14, width * 0.56), 20); ctx.fillText("출력 변화가 작음", Math.max(14, width * 0.56), 36);
-        plotWave(14, 48, width * 0.38, 84, (phase) => Math.abs(Math.sin(phase)) * 0.95 - 0.45, muted);
-        plotWave(width * 0.56, 48, width * 0.4, 84, (phase) => 0.55 - ripple * ((phase % Math.PI) / Math.PI), cyan);
-        ctx.fillStyle = cyan;
-        ctx.fillRect(width * 0.18, 160, 18, 70);
-        ctx.fillRect(width * 0.18 - 12, 172, 42, 5);
-        ctx.fillRect(width * 0.18 - 12, 210, 42, 5);
-        arrow(width * 0.31, 193, width * 0.58, 193, yellow);
-        ctx.fillStyle = ink; ctx.fillText(`C=${value} μF`, 14, height - 18);
-        ctx.fillStyle = yellow; ctx.fillText(`전압 출렁임 ${(ripple * 100).toFixed(0)}%`, Math.max(14, width - 126), height - 18);
+        const rippleFraction = capacitorRippleFraction(value);
+        const graphLeft = 18;
+        const graphTop = 46;
+        const graphWidth = width - 36;
+        const graphHeight = 112;
+        const voltageY = (voltage: number) => graphTop + graphHeight - 8 - voltage * (graphHeight - 20);
+        const drawVoltageCurve = (sample: (phase: number) => number, color: string, dashed = false) => {
+          ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.setLineDash(dashed ? [5, 4] : []); ctx.beginPath();
+          for (let x = 0; x <= graphWidth; x += 2) {
+            const phase = (x / graphWidth) * Math.PI * 4;
+            const y = voltageY(sample(phase));
+            if (x === 0) ctx.moveTo(graphLeft + x, y); else ctx.lineTo(graphLeft + x, y);
+          }
+          ctx.stroke(); ctx.setLineDash([]);
+        };
+        ctx.fillStyle = ink; ctx.font = "800 12px system-ui, sans-serif";
+        ctx.fillText("정류 전압과 축전기 출력 전압 비교", 14, 20);
+        ctx.fillStyle = muted; ctx.font = "650 9px system-ui, sans-serif";
+        ctx.fillText("같은 부하·주파수에서 전기 용량 C만 비교", 14, 36);
+        ctx.strokeStyle = "#304656"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(graphLeft, graphTop + graphHeight - 8); ctx.lineTo(graphLeft + graphWidth, graphTop + graphHeight - 8); ctx.stroke();
+        drawVoltageCurve((phase) => Math.abs(Math.cos(phase)), muted, true);
+        drawVoltageCurve((phase) => capacitorOutputVoltage(phase, rippleFraction), cyan);
+        ctx.fillStyle = muted; ctx.font = "700 8px system-ui, sans-serif"; ctx.fillText("--- 정류 전압", 18, 170);
+        ctx.fillStyle = cyan; ctx.fillText("━ 축전기·부하 전압", Math.max(105, width - 122), 170);
+        ctx.fillStyle = yellow; ctx.font = "800 8px system-ui, sans-serif";
+        [0, graphWidth / 2, graphWidth].forEach((offset) => { ctx.beginPath(); ctx.arc(graphLeft + offset, voltageY(1), 3, 0, Math.PI * 2); ctx.fill(); });
+        ctx.fillText("정류 전압이 다시 높아질 때 충전", 14, 187);
+
+        const topRail = 226;
+        const bottomRail = 346;
+        const rectifierRight = 76;
+        const capacitorX = width * 0.55;
+        const loadX = width - 29;
+        ctx.fillStyle = "#102936"; ctx.fillRect(12, 252, 64, 66);
+        ctx.strokeStyle = muted; ctx.lineWidth = 1.5; ctx.strokeRect(12, 252, 64, 66);
+        ctx.fillStyle = ink; ctx.font = "800 9px system-ui, sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("다이오드", 44, 277); ctx.fillText("정류 회로", 44, 292); ctx.textAlign = "start";
+        drawPath([{ x: rectifierRight, y: 270 }, { x: rectifierRight, y: topRail }, { x: loadX, y: topRail }], "#526875", 2);
+        drawPath([{ x: rectifierRight, y: 300 }, { x: rectifierRight, y: bottomRail }, { x: loadX, y: bottomRail }], "#526875", 2);
+        drawPath([{ x: capacitorX, y: topRail }, { x: capacitorX, y: 276 }], cyan, 3);
+        drawPath([{ x: capacitorX, y: 294 }, { x: capacitorX, y: bottomRail }], cyan, 3);
+        ctx.strokeStyle = cyan; ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(capacitorX - 17, 278); ctx.lineTo(capacitorX + 17, 278); ctx.moveTo(capacitorX - 17, 292); ctx.lineTo(capacitorX + 17, 292); ctx.stroke();
+        ctx.fillStyle = cyan; ctx.font = "900 11px system-ui, sans-serif";
+        ctx.fillText("+", capacitorX - 26, 279); ctx.fillText("−", capacitorX - 26, 296);
+        ctx.font = "800 10px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText(`C=${value} μF`, capacitorX, 316); ctx.textAlign = "start";
+        drawPath([{ x: loadX, y: topRail }, { x: loadX, y: 267 }], yellow, 3);
+        ctx.strokeStyle = yellow; ctx.lineWidth = 2.5; ctx.beginPath();
+        ctx.moveTo(loadX, 267); ctx.lineTo(loadX - 7, 274); ctx.lineTo(loadX + 7, 282); ctx.lineTo(loadX - 7, 290); ctx.lineTo(loadX + 7, 298); ctx.lineTo(loadX - 7, 306); ctx.lineTo(loadX, 315); ctx.stroke();
+        drawPath([{ x: loadX, y: 315 }, { x: loadX, y: bottomRail }], yellow, 3);
+        ctx.fillStyle = yellow; ctx.font = "800 9px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText("부하 R", loadX, 329); ctx.textAlign = "start";
+        arrow(rectifierRight + 8, topRail, capacitorX - 20, topRail, cyan);
+        arrow(capacitorX + 18, topRail, loadX - 5, topRail, yellow);
+        arrow(loadX - 16, 247, loadX - 16, 326, yellow);
+        ctx.fillStyle = cyan; ctx.font = "750 9px system-ui, sans-serif"; ctx.fillText("충전: 정류 전압 > 축전기 전압", 14, 372);
+        ctx.fillStyle = yellow; ctx.fillText("방전: 정류 전압이 낮을 때 축전기 → 부하", 14, 389);
+        ctx.fillStyle = muted; ctx.font = "700 9px system-ui, sans-serif";
+        ctx.fillText(`상대 전압 변화 약 ${(rippleFraction * 100).toFixed(0)}% · ΔV≈ΔQ/C`, 14, height - 14);
       } else if (visualType === "switching") {
-        const duty = value / 100;
-        ctx.fillStyle = ink; ctx.fillText("전류를 켜고 끄는 신호", 14, 22);
-        ctx.fillStyle = yellow; ctx.fillText("나누어 전달되는 에너지", 14, 43);
-        const pulseLeft = 14; const pulseTop = 65; const pulseWidth = width - 28; const cell = pulseWidth / 5;
+        const duty = switchingRelativeTransfer(value);
+        ctx.fillStyle = ink; ctx.font = "800 12px system-ui, sans-serif"; ctx.fillText("트랜지스터를 켜고 끄는 제어 신호", 14, 20);
+        ctx.fillStyle = muted; ctx.font = "650 9px system-ui, sans-serif"; ctx.fillText("한 주기에서 켜진 시간의 비율을 비교", 14, 37);
+        const pulseLeft = 14; const pulseTop = 52; const pulseWidth = width - 28; const cell = pulseWidth / 5;
         ctx.strokeStyle = cyan; ctx.lineWidth = 3; ctx.beginPath();
         for (let i = 0; i < 5; i += 1) {
           const x = pulseLeft + i * cell;
-          ctx.moveTo(x, pulseTop + 55); ctx.lineTo(x, pulseTop + 8); ctx.lineTo(x + cell * duty, pulseTop + 8); ctx.lineTo(x + cell * duty, pulseTop + 55); ctx.lineTo(x + cell, pulseTop + 55);
+          ctx.moveTo(x, pulseTop + 54); ctx.lineTo(x, pulseTop + 8); ctx.lineTo(x + cell * duty, pulseTop + 8); ctx.lineTo(x + cell * duty, pulseTop + 54); ctx.lineTo(x + cell, pulseTop + 54);
         }
         ctx.stroke();
-        for (let i = 0; i < 5; i += 1) {
-          ctx.fillStyle = i % 2 ? yellow : cyan;
-          ctx.fillRect(18 + i * ((width - 46) / 5), 150, Math.max(8, ((width - 56) / 5) * duty), 42);
-        }
-        arrow(24, 220, width - 24, 220, yellow);
-        ctx.fillStyle = muted; ctx.font = "700 11px system-ui, sans-serif";
-        ctx.fillText("켜짐: 전류가 흐름", 14, height - 17);
-        ctx.fillText("꺼짐: 전류가 거의 0", Math.max(14, width - 136), height - 17);
+        ctx.fillStyle = cyan; ctx.font = "800 9px system-ui, sans-serif"; ctx.fillText(`켜짐 ${value}%`, 14, 124);
+        ctx.fillStyle = muted; ctx.fillText(`꺼짐 ${100 - value}%`, Math.max(80, width - 66), 124);
+        ctx.strokeStyle = "#304656"; ctx.beginPath(); ctx.moveTo(14, 139); ctx.lineTo(width - 14, 139); ctx.stroke();
+        ctx.fillStyle = ink; ctx.font = "800 10px system-ui, sans-serif"; ctx.fillText("전류 경로를 여닫는 개념 모형", 14, 159);
+        const topY = 190;
+        const bottomY = 258;
+        const sourceX = 31;
+        const switchLeft = 78;
+        const switchRight = 108;
+        const converterLeft = 125;
+        const converterRight = width - 57;
+        const batteryX = width - 27;
+        ctx.fillStyle = "#102936"; ctx.fillRect(12, topY - 18, 38, bottomY - topY + 36);
+        ctx.strokeStyle = cyan; ctx.lineWidth = 2; ctx.strokeRect(12, topY - 18, 38, bottomY - topY + 36);
+        ctx.fillStyle = cyan; ctx.font = "900 9px system-ui, sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("외부", sourceX, 207); ctx.fillText("직류", sourceX, 220); ctx.fillText("+", sourceX, topY - 4); ctx.fillText("−", sourceX, bottomY + 11); ctx.textAlign = "start";
+        drawPath([{ x: sourceX, y: topY }, { x: switchLeft - 4, y: topY }], cyan, 3);
+        ctx.fillStyle = cyan; ctx.beginPath(); ctx.arc(switchLeft, topY, 4, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(switchRight, topY, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = yellow; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(switchLeft + 1, topY - 1); ctx.lineTo(switchRight - 4, topY - 14); ctx.stroke();
+        ctx.fillStyle = yellow; ctx.font = "800 8px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.fillText("트랜지스터", (switchLeft + switchRight) / 2, topY + 22); ctx.fillText("스위치", (switchLeft + switchRight) / 2, topY + 33); ctx.textAlign = "start";
+        drawPath([{ x: switchRight + 4, y: topY }, { x: converterLeft, y: topY }], cyan, 3);
+        ctx.fillStyle = "#173748"; ctx.fillRect(converterLeft, topY - 23, converterRight - converterLeft, 46);
+        ctx.fillStyle = ink; ctx.font = "800 8px system-ui, sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("전압 변환", (converterLeft + converterRight) / 2, topY - 3); ctx.fillText("·에너지 전달", (converterLeft + converterRight) / 2, topY + 10); ctx.textAlign = "start";
+        drawPath([{ x: converterRight, y: topY }, { x: batteryX, y: topY }, { x: batteryX, y: topY + 10 }], yellow, 3);
+        ctx.fillStyle = "#102936"; ctx.fillRect(batteryX - 15, topY + 10, 30, bottomY - topY - 20);
+        ctx.strokeStyle = yellow; ctx.lineWidth = 2.5; ctx.strokeRect(batteryX - 15, topY + 10, 30, bottomY - topY - 20);
+        ctx.fillStyle = yellow; ctx.font = "900 10px system-ui, sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("+", batteryX, topY + 25); ctx.fillText("−", batteryX, bottomY - 13); ctx.fillText("배터리", batteryX, bottomY + 13); ctx.textAlign = "start";
+        drawPath([{ x: batteryX, y: bottomY - 10 }, { x: batteryX, y: bottomY }, { x: sourceX, y: bottomY }], "#526875", 2.5);
+        arrow(sourceX + 16, topY - 10, switchLeft - 7, topY - 10, yellow);
+        arrow(switchRight + 5, topY - 10, converterLeft - 2, topY - 10, yellow);
+        arrow(batteryX - 18, bottomY, sourceX + 18, bottomY, muted);
+        ctx.fillStyle = ink; ctx.font = "800 10px system-ui, sans-serif"; ctx.fillText(`이상적 개념 모형의 상대 전달량 ≈ ${value}%`, 14, 285);
+        ctx.fillStyle = muted; ctx.font = "650 9px system-ui, sans-serif";
+        ctx.fillText("실제 충전기는 코일·변압기·축전기·보호 회로도 함께 사용", 14, height - 14);
       } else if (visualType === "faults") {
         const fault = Math.round(value);
         const labels = ["다이오드 하나 끊김", "축전기 제거", "트랜지스터 계속 켜짐"];
         ctx.fillStyle = yellow; ctx.font = "800 15px system-ui, sans-serif"; ctx.fillText(`LOG 0${fault} · ${labels[fault - 1]}`, 14, 28);
         ctx.strokeStyle = "#304656"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(14, 55); ctx.lineTo(width - 14, 55); ctx.stroke();
         if (fault === 1) {
-          plotWave(16, 72, width - 32, 116, (phase) => Math.max(0, Math.sin(phase)) * 0.9 - 0.42, yellow);
-          ctx.fillStyle = ink; ctx.fillText("입력의 일부 구간에서 전류가 끊김", 14, height - 44); ctx.fillStyle = muted; ctx.fillText("평균 출력↓ · 출력 변화↑", 14, height - 18);
+          plotWave(16, 70, width - 32, 105, (phase) => Math.abs(Math.sin(phase)) * 0.9 - 0.42, cyan);
+          plotWave(16, 70, width - 32, 105, (phase) => Math.max(0, Math.sin(phase)) * 0.9 - 0.42, yellow);
+          ctx.fillStyle = cyan; ctx.font = "700 9px system-ui, sans-serif"; ctx.fillText("정상: 양쪽 구간 모두 출력", 14, 196);
+          ctx.fillStyle = yellow; ctx.fillText("고장: 한쪽 구간 출력이 빠짐", 14, 214);
+          ctx.fillStyle = ink; ctx.font = "800 11px system-ui, sans-serif"; ctx.fillText("평균 출력↓ · 축전기 사용 시 전압 변화↑", 14, height - 18);
         } else if (fault === 2) {
-          plotWave(16, 72, width - 32, 116, (phase) => Math.abs(Math.sin(phase)) * 0.95 - 0.45, yellow);
-          ctx.fillStyle = ink; ctx.fillText("낮아지는 전압을 보충하지 못함", 14, height - 44); ctx.fillStyle = muted; ctx.fillText("출력 전압 변화가 크게 증가", 14, height - 18);
+          plotWave(16, 70, width - 32, 105, (phase) => 0.35 - 0.12 * ((((phase % Math.PI) + Math.PI) % Math.PI) / Math.PI), cyan);
+          plotWave(16, 70, width - 32, 105, (phase) => Math.abs(Math.sin(phase)) * 0.95 - 0.45, yellow);
+          ctx.fillStyle = cyan; ctx.font = "700 9px system-ui, sans-serif"; ctx.fillText("정상: 축전기가 낮아지는 전압을 보충", 14, 196);
+          ctx.fillStyle = yellow; ctx.fillText("제거: 정류 전압을 그대로 따라감", 14, 214);
+          ctx.fillStyle = ink; ctx.font = "800 11px system-ui, sans-serif"; ctx.fillText("출력 전압 변화가 크게 증가", 14, height - 18);
         } else {
-          ctx.fillStyle = yellow; ctx.fillRect(18, 86, width - 36, 62);
-          ctx.fillStyle = "#08131d"; ctx.font = "900 22px system-ui, sans-serif"; ctx.fillText("계속 켜짐", width / 2 - 42, 126);
-          ctx.fillStyle = ink; ctx.font = "700 13px system-ui, sans-serif"; ctx.fillText("전류 조절과 보호가 어려움", 14, height - 44); ctx.fillStyle = muted; ctx.fillText("큰 전류·발열 위험", 14, height - 18);
+          const pulseWidth = width - 32;
+          ctx.strokeStyle = cyan; ctx.lineWidth = 3; ctx.beginPath();
+          for (let i = 0; i < 4; i += 1) { const x = 16 + i * pulseWidth / 4; ctx.moveTo(x, 130); ctx.lineTo(x, 82); ctx.lineTo(x + pulseWidth / 8, 82); ctx.lineTo(x + pulseWidth / 8, 130); ctx.lineTo(x + pulseWidth / 4, 130); }
+          ctx.stroke();
+          ctx.strokeStyle = yellow; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(16, 72); ctx.lineTo(width - 16, 72); ctx.stroke();
+          ctx.fillStyle = cyan; ctx.font = "700 9px system-ui, sans-serif"; ctx.fillText("정상 제어: 켜짐·꺼짐 반복", 14, 158);
+          ctx.fillStyle = yellow; ctx.fillText("고장: 계속 켜진 신호", 14, 176);
+          ctx.fillStyle = ink; ctx.font = "800 11px system-ui, sans-serif"; ctx.fillText("전류 조절·보호 어려움 → 큰 전류·발열 가능", 14, height - 18);
         }
       } else if (visualType === "journey") {
         const step = Math.round(value);
-        const labels = ["발전", "송전·전압 낮추기", "한 방향 전류", "출력 변화 줄이기", "전류 조절"];
+        const labels = ["발전기: 에너지 전환", "변압·송전: 높임·낮춤", "다이오드: 한쪽 전압", "축전기: 전압 변화 줄임", "트랜지스터: 전류 조절"];
         const colors = [yellow, cyan, yellow, cyan, yellow];
-        const usable = width - 36;
+        ctx.fillStyle = ink; ctx.font = "800 10px system-ui, sans-serif";
+        ctx.fillText("전체 경로에서 지금 확인하는 역할", 14, 17);
         labels.forEach((label, index) => {
-          const x = 18 + (index * usable) / 5;
-          ctx.fillStyle = index + 1 <= step ? colors[index] : "#294151";
-          ctx.fillRect(x, 52, usable / 5 - 5, 42);
-          ctx.save(); ctx.translate(x + 8, 110); ctx.rotate(-0.32); ctx.fillStyle = ink; ctx.font = "800 10px system-ui, sans-serif"; ctx.fillText(label, 0, 0); ctx.restore();
+          const y = 28 + index * 24;
+          const active = index + 1 <= step;
+          ctx.fillStyle = active ? colors[index] : "#294151";
+          ctx.fillRect(14, y, width - 28, 19);
+          ctx.fillStyle = active ? "#08131d" : muted;
+          ctx.font = "850 9px system-ui, sans-serif";
+          ctx.fillText(`${index + 1}`, 20, y + 13);
+          ctx.fillText(label, 38, y + 13);
         });
-        const waveLeft = 14; const waveTop = 155; const waveWidth = width - 28;
-        if (step <= 2) plotWave(waveLeft, waveTop, waveWidth, 84, (phase) => Math.sin(phase), cyan);
-        else if (step === 3) plotWave(waveLeft, waveTop, waveWidth, 84, (phase) => Math.abs(Math.sin(phase)) * 0.95 - 0.45, yellow);
-        else if (step === 4) plotWave(waveLeft, waveTop, waveWidth, 84, (phase) => 0.48 - 0.22 * ((phase % Math.PI) / Math.PI), cyan);
-        else plotWave(waveLeft, waveTop, waveWidth, 84, () => 0.42, yellow);
-        ctx.fillStyle = muted; ctx.font = "700 11px system-ui, sans-serif"; ctx.fillText(`${step}. ${labels[step - 1]} 단계의 대표 파형`, 14, height - 16);
+        const waveLeft = 14; const waveTop = 160; const waveWidth = width - 28;
+        ctx.strokeStyle = "#304656"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(waveLeft, 196); ctx.lineTo(waveLeft + waveWidth, 196); ctx.stroke();
+        if (step <= 2) plotWave(waveLeft, waveTop, waveWidth, 72, (phase) => Math.sin(phase), cyan);
+        else if (step === 3) plotWave(waveLeft, waveTop, waveWidth, 72, (phase) => Math.abs(Math.sin(phase)) * 0.95 - 0.45, yellow);
+        else if (step === 4) plotWave(waveLeft, waveTop, waveWidth, 72, (phase) => 0.48 - 0.22 * ((phase % Math.PI) / Math.PI), cyan);
+        else plotWave(waveLeft, waveTop, waveWidth, 72, (phase) => 0.42 + 0.025 * Math.sin(phase * 3), yellow);
+        ctx.fillStyle = muted; ctx.font = "700 9px system-ui, sans-serif"; ctx.fillText(`${step}단계의 단순화한 전압 모습`, 14, height - 10);
       }
     };
     draw();

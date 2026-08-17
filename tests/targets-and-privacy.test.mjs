@@ -55,7 +55,7 @@ test("GitHub Pages 하위 경로에서도 모든 런타임 자산을 현재 문�
   assert.match(source, /data\/quiz_bank_v1\.json\?v=\$\{CONTENT_VERSION\}/);
   assert.doesNotMatch(source, /(?:fetch|loadScript|register)\("\//);
   assert.match(serviceWorker, /self\.registration\.scope/);
-  assert.match(serviceWorker, /physgame-three-lessons-v5-live-answer-trace/);
+  assert.match(serviceWorker, /physgame-three-lessons-v6-science-audit/);
   assert.match(serviceWorker, /fetch\(event\.request\)[\s\S]*cache\.put\(event\.request, copy\)/);
   assert.equal(manifest.start_url, "./");
   assert.equal(manifest.scope, "./");

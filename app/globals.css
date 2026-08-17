@@ -209,6 +209,8 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .diagram-panel { padding: 14px; }
 .science-canvas { display: block; width: 100%; height: 270px; background: #0a1721; border: 1px solid #223948; }
 .science-canvas-rectifier { height: 500px; }
+.science-canvas-smoothing { height: 430px; }
+.science-canvas-switching { height: 325px; }
 .diagram-panel > p { margin: 16px 4px 10px; color: #c9d1d7; font-size: 14px; line-height: 1.7; word-break: keep-all; }
 .simulation-label { display: inline-block; padding: 5px 8px; background: rgba(66, 211, 201, .09); color: var(--cyan); font-size: 9px; font-weight: 800; }
 .content-section > .primary-button { margin-top: 18px; }
@@ -473,6 +475,8 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
   .icon-button { width: 34px; height: 34px; }
   .science-canvas { height: 260px; }
   .science-canvas-rectifier { height: 500px; }
+  .science-canvas-smoothing { height: 430px; }
+  .science-canvas-switching { height: 325px; }
   .result-grid { grid-template-columns: 1fr; }
   .student-join-panel > div { grid-template-columns: 1fr; }
 }
